@@ -8,34 +8,40 @@
 ##
 
 # ESC op codes used with fn_esc
-declare -r esc_save_cursor='7'
-declare -r esc_restore_cursor='8'
+readonly esc_save_cursor='7'
+readonly esc_restore_cursor='8'
 
 # CSI op codes used with fn_csi
-declare -r csi_scroll_up='S'
-declare -r csi_scroll_down='T'
-declare -r csi_row_insert='L'
-declare -r csi_row_delete='M'
-declare -r csi_row_up='A'
-declare -r csi_row_down='B'
-declare -r csi_row_erase='K'
-declare -r csi_col_pos='G'
-declare -r csi_set_color='m'
-declare -r csi_cursor_hide='?25l'
-declare -r csi_cursor_show='?25h'
+readonly csi_scroll_up='S'
+readonly csi_scroll_down='T'
+readonly csi_row_insert='L'
+readonly csi_row_delete='M'
+readonly csi_row_up='A'
+readonly csi_row_down='B'
+readonly csi_row_erase='K'
+readonly csi_col_pos='G'
+readonly csi_set_color='m'
+readonly csi_cursor_hide='?25l'
+readonly csi_cursor_show='?25h'
 
 # color codes
-declare -ir color_fg=30
-declare -ir color_bg=40
-declare -ir color_bright=60
-declare -ir color_black=0
-declare -ir color_red=1
-declare -ir color_green=2
-declare -ir color_yellow=3
-declare -ir color_blue=4
-declare -ir color_magenta=5
-declare -ir color_cyan=6
-declare -ir color_white=7
+readonly color_fg=30
+readonly color_bg=40
+readonly color_bright=60
+readonly color_black=0
+readonly color_red=1
+readonly color_green=2
+readonly color_yellow=3
+readonly color_blue=4
+readonly color_magenta=5
+readonly color_cyan=6
+readonly color_white=7
+
+# codes for DEC graphics charset
+readonly decg_hz_line='\e(0\x78\e(B'
+readonly decg_t_top='\e(0\x77\e(B'
+readonly decg_t_bottom='\e(0\x76\e(B'
+readonly decg_block='\e(0\xe1\e(B'
 
 # generate errors if unset vars are used.
 set -o nounset
@@ -69,7 +75,7 @@ function fn_csi()
 function fn_animate_wait()
 {
 	# we use read insted of sleep because it is in-process
-	local -r _animate_delay=0.02
+	local -r _animate_delay=0.015
 	read -sn1 -t $_animate_delay
 }
 
