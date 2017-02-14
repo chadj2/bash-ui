@@ -1,6 +1,5 @@
 ##
-# BIW-CHOOSER - Bash Inline Widgets Scrollable Chooser
-# 
+# BIW-CHOOSER - Scrollable Chooser Widget
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
@@ -9,45 +8,37 @@
 
 source 'biw-util.sh'
 
-function fn_chooser_top()
+# codes for DEC graphics charset
+declare -r decg_hz_line='\e(0\x78\e(B'
+declare -r decg_t_top='\e(0\x77\e(B'
+declare -r decg_t_bottom='\e(0\x76\e(B'
+declare -r decg_block='\e(0\xe1\e(B'
+
+function fn_choose_cursor_home()
 {
 	# position the cursor at the start of the menu
 	fn_esc $esc_restore_cursor
-	fn_csi $csi_row_up $((_menu_size))
+	fn_csi $csi_row_up $choose_height
 }
 
-function fn_chooser_line()
+function fn_choose_draw_slider()
 {
-	local _idx=$1
-	local _name=${_menu_entries[$_idx]}
-
-	# calculate colors
-	local _panel_color=$menu_color_nsel
-	local _slider_color=$menu_color_slider_bar
-
-	if ((_menu_idx_active == _idx))
-	then
-		_panel_color=$menu_color_sel
-		_slider_color=$menu_color_handle
-	fi
-
-	# calculate characters
+	local -i _line_idx=$1
 	local _last_char=$decg_hz_line
-	local _first_char=$decg_bullet
 
-	if ((_idx == _menu_idx_start))
+	if ((_line_idx == _choose_idx_start))
 	then
 		# Top charachter
-		if ((_idx == 0))
+		if ((_line_idx == 0))
 		then
 			_last_char=$decg_t_top
 		else
 			_last_char='^'
 		fi
-	elif ((_idx == _menu_idx_end))
+	elif ((_line_idx == _choose_idx_end))
 	then
 		# Bottom Charachter
-		if ((_idx == _menu_idx_last))
+		if ((_line_idx == choose_idx_last))
 		then
 			_last_char=$decg_t_bottom
 		else
@@ -55,63 +46,93 @@ function fn_chooser_line()
 		fi
 	fi
 
-	# draw menu text
-	fn_csi $csi_col_pos $menu_margin
-	fn_csi $csi_set_color $((color_fg + menu_color_text))
+	local -i _slider_color=$choose_color_slider_bar
 
-	fn_csi $csi_set_color $((color_bg + _panel_color))
-	printf "${_first_char}"
-	printf "%-${menu_width}s" $_name
-	
+	if ((_choose_idx_active == _line_idx))
+	then
+		_slider_color=$choose_color_handle
+	fi
+
 	fn_csi $csi_set_color $((color_bg + _slider_color))
-	printf "${_last_char}"
+	echo -en "${_last_char}"
+}
+
+function fn_choose_draw_selection()
+{
+	local -i _line_idx=$1
+	local -i _panel_color=$choose_color_inactive
+
+	if ((_choose_idx_active == _line_idx))
+	then
+		_panel_color=$choose_color_active
+	fi
+
+	# get line data from array
+	local _line_result="${choose_data_values[$_line_idx]}"
+
+	# selection contents
+	_line_result="[${_line_idx}] ${_line_result}"
+
+	# pad and trim line
+	printf -v _line_result "%-${choose_width}s" "${_line_result}"
+	_line_result="${_line_result:0:${choose_width}}"
+
+	# output line
+	fn_csi $csi_set_color $((color_bg + _panel_color))
+	echo -n "${_line_result}"
+}
+
+function fn_choose_draw_row()
+{
+	local -i _line_idx=$1
+
+	# skip past margin
+	fn_csi $csi_col_pos $choose_margin
+
+	# set text color (BG will be set later)
+	fn_csi $csi_set_color $((color_fg + choose_color_text))
+
+	fn_choose_draw_selection $_line_idx
+	fn_choose_draw_slider $_line_idx
 
 	# reset colors
 	fn_csi $csi_set_color 0
 }
 
-function fn_chooser_redraw()
+function fn_choose_redraw()
 {
 	# move to the top of where we will draw the menu
-	fn_chooser_top
+	fn_choose_cursor_home
 
 	# calculate indexes to draw
-	local _indexes=$(eval echo {$_menu_idx_start..$_menu_idx_end})
-	#echo -n "{$_menu_idx_start..$_menu_idx_end}"
+	local _indexes=$(eval echo {$_choose_idx_start..$_choose_idx_end})
 
 	# draw all menu items
-	for _idx in ${_indexes}
+	for _line_idx in ${_indexes}
 	do
-		fn_chooser_line $_idx
+		fn_choose_draw_row $_line_idx
 		fn_csi $csi_row_down 1
 	done
 
 	# set the cursor after the active item
-	fn_csi $csi_row_up $((_menu_idx_end - _menu_idx_active + 1))
+	fn_csi $csi_row_up $((_choose_idx_end - _choose_idx_active + 1))
 }
 
-function fn_animate_wait()
+function fn_choose_move_window()
 {
-	# we use read insted of sleep because it is in-process
-	read -sn1 -t 0.02
+	# location is specified by the start
+	_choose_idx_start=$1
+
+	# end is calculateed
+	_choose_idx_end=$((_choose_idx_start + choose_height - 1))
+
+	fn_choose_redraw
 }
 
-function fn_chooser_init()
+function fn_choose_init()
 {
-	# menu state
-	_menu_data_size=${#_menu_entries[*]}
-	_menu_size=$_menu_data_size
-	if ((_menu_size > _menu_size_max))
-	then
-		_menu_size=$_menu_size_max
-	fi
-
-	_menu_idx_start=$_menu_idx_active
-	_menu_idx_end=$((_menu_size + _menu_idx_start - 1))
-	_menu_idx_last=$((_menu_data_size - 1))
-
 	# make sure we call menu close during terminate to restore terminal settings
-	trap "fn_chooser_close; exit 1" SIGHUP SIGINT SIGTERM
+	trap "fn_choose_close; exit 1" SIGHUP SIGINT SIGTERM
 
 	# disable echo during redraw or else quickly repeated arrow keys
 	# could move the cursor
@@ -124,7 +145,7 @@ function fn_chooser_init()
 	fn_esc $esc_save_cursor
 
 	# animate open
-	for _idx in $(eval echo {1..$_menu_size})
+	for _line_idx in $(eval echo {1..$choose_height})
 	do
 		fn_csi $csi_row_up 1
 		fn_csi $csi_scroll_up 1
@@ -132,35 +153,32 @@ function fn_chooser_init()
 		fn_animate_wait
 	done
 
-	# non-animated insert:
-	#fn_csi $csi_scroll_up $_menu_size
-	#fn_chooser_top
-	#fn_csi $csi_row_insert $_menu_size
+	# non-animated open:
+	#fn_csi $csi_scroll_up $choose_height
+	#fn_choose_cursor_home
+	#fn_csi $csi_row_insert $choose_height
 
-	# draw entire menu
-	fn_chooser_redraw
-
-	# activate current menu line
-	fn_chooser_line $_menu_idx_active
+	# set window location and redraw
+	fn_choose_move_window $_choose_idx_active
 }
 
-function fn_chooser_close()
+function fn_choose_close()
 {
 	# goto home position
-	fn_chooser_top
-
-	# non-animate close:
-	#fn_csi $csi_row_delete $_menu_size
-	#fn_csi $csi_scroll_down $_menu_size
+	fn_choose_cursor_home
 
 	# animate close
-	for _idx in $(eval echo {1..$_menu_size})
+	for _line_idx in $(eval echo {1..$choose_height})
 	do
 		fn_csi $csi_row_delete 1
 		fn_csi $csi_scroll_down 1
 		fn_csi $csi_row_down 1
 		fn_animate_wait
 	done
+
+	# non-animate close:
+	#fn_csi $csi_row_delete $choose_height
+	#fn_csi $csi_scroll_down $choose_height
 
 	# restore original cursor position
 	fn_esc $esc_restore_cursor
@@ -176,95 +194,67 @@ function fn_chooser_close()
 	trap - SIGHUP SIGINT SIGTERM
 }
 
-function fn_chooser_down()
+function fn_choose_down()
 {
-	if ((_menu_idx_active >= _menu_idx_last))
+	if ((_choose_idx_active >= choose_idx_last))
 	then
 		# we are at the end of the data so we can't move
 		return
 	fi
 
-	((_menu_idx_active += 1))
+	# move active index
+	((_choose_idx_active += 1))
 
-	if ((_menu_idx_active > _menu_idx_end))
+	if ((_choose_idx_active > _choose_idx_end))
 	then
 		# new index has exceeded the bounds of the window
-		# so we need to move the window and redraw
-		_menu_idx_end=$_menu_idx_active
-		_menu_idx_start=$((_menu_idx_end - _menu_size + 1))
-		fn_chooser_redraw
+		fn_choose_move_window $((_choose_idx_start + 1))
 		return
 	fi
 
 	# new index is inside the current window and so we just
-	# move the active menu item
-	fn_chooser_line $((_menu_idx_active - 1))
+	# move the active item down
+	fn_choose_draw_row $((_choose_idx_active - 1))
 	fn_csi $csi_row_down 1
-	fn_chooser_line $_menu_idx_active
+	fn_choose_draw_row $_choose_idx_active
 }
 
-function fn_chooser_up()
+function fn_choose_up()
 {
-	if ((_menu_idx_active <= 0))
+	if ((_choose_idx_active <= 0))
 	then
 		# we are at the start of the data so we can't move
 		return
 	fi
 
-	((_menu_idx_active -= 1))
+	# move active index
+	((_choose_idx_active -= 1))
 
-	if ((_menu_idx_active < _menu_idx_start))
+	if ((_choose_idx_active < _choose_idx_start))
 	then
 		# new index has exceeded the bounds of the window
-		# so we need to move the window and redraw
-		_menu_idx_start=$_menu_idx_active
-		_menu_idx_end=$((_menu_size + _menu_idx_start - 1))
-		fn_chooser_redraw
+		fn_choose_move_window $((_choose_idx_start - 1))
 		return
 	fi
 
 	# new index is inside the current window and so we just
-	# move the active menu item
-	fn_chooser_line $((_menu_idx_active + 1))
+	# move the active item up
+	fn_choose_draw_row $((_choose_idx_active + 1))
 	fn_csi $csi_row_up 1
-	fn_chooser_line $_menu_idx_active
+	fn_choose_draw_row $_choose_idx_active
 }
 
-function fn_chooser_display()
+function fn_choose_event_loop()
 {
-	# initial active entry
-	local _menu_idx_active=0
-
-	# get refrence to array with menu entries
-	local _menu_entries=("${!1}")
-
-	# menu size with default
-	local _menu_size_max=${2:-5}
-
-	# colors
-	local menu_color_text=$color_black
-	local menu_color_sel=$color_red
-	local menu_color_nsel=$color_blue
-	local menu_color_slider_bar=$color_cyan
-	local menu_color_handle=$color_yellow
-
-	# width of displayed menu
-	local menu_width=30
-
-	# left margin
-	local menu_margin=10
-
-	fn_chooser_init
-
 	local _key
 	while fn_read_key "_key"
 	do
 		case $_key in
 			'[A')
-				fn_chooser_up
+				fn_choose_up
 				;;
 			'[B')
-				fn_chooser_down
+				fn_choose_down
 				;;
 			'') 
 				# enter key hit
@@ -275,8 +265,37 @@ function fn_chooser_display()
 				;;
 		esac
 	done
+}
 
-	fn_chooser_close
+function fn_choose_display()
+{
+	# get refrence to array with menu entries
+	local -ra choose_data_values=("${!1}")
+	local -ri choose_data_size=${#choose_data_values[*]}
+	local -ri choose_idx_last=$((choose_data_size - 1))
 
-	return $_menu_idx_active
+	# menu dimensions
+	local -ri choose_margin=10
+	local -ri choose_width=50
+	local -ri choose_height_max=${2:-5}
+	local -ri choose_height=$((choose_data_size > choose_height_max \
+		? choose_height_max : choose_data_size))
+
+	# colors
+	local -ri choose_color_text=$color_black
+	local -ri choose_color_active=$color_red
+	local -ri choose_color_inactive=$color_blue
+	local -ri choose_color_slider_bar=$color_cyan
+	local -ri choose_color_handle=$color_yellow
+
+	# state variables
+	local -i _choose_idx_active=0
+	local -i _choose_idx_start
+	local -i _choose_idx_end
+
+	fn_choose_init
+	fn_choose_event_loop
+	fn_choose_close
+
+	return $_choose_idx_active
 }

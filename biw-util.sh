@@ -8,41 +8,37 @@
 ##
 
 # ESC op codes used with fn_esc
-esc_save_cursor='7'
-esc_restore_cursor='8'
+declare -r esc_save_cursor='7'
+declare -r esc_restore_cursor='8'
 
 # CSI op codes used with fn_csi
-csi_scroll_up='S'
-csi_scroll_down='T'
-csi_row_insert='L'
-csi_row_delete='M'
-csi_row_up='A'
-csi_row_down='B'
-csi_row_erase='K'
-csi_col_pos='G'
-csi_set_color='m'
-csi_cursor_hide='?25l'
-csi_cursor_show='?25h'
-
-# codes for DEC graphics charset
-decg_hz_line='\e(0\x78\e(B'
-decg_t_top='\e(0\x77\e(B'
-decg_t_bottom='\e(0\x76\e(B'
-decg_bullet='\e(0\x60\e(B'
-decg_block='\e(0\xe1\e(B'
+declare -r csi_scroll_up='S'
+declare -r csi_scroll_down='T'
+declare -r csi_row_insert='L'
+declare -r csi_row_delete='M'
+declare -r csi_row_up='A'
+declare -r csi_row_down='B'
+declare -r csi_row_erase='K'
+declare -r csi_col_pos='G'
+declare -r csi_set_color='m'
+declare -r csi_cursor_hide='?25l'
+declare -r csi_cursor_show='?25h'
 
 # color codes
-color_fg=30
-color_bg=40
-color_bright=60
-color_black=0
-color_red=1
-color_green=2
-color_yellow=3
-color_blue=4
-color_magenta=5
-color_cyan=6
-color_white=7
+declare -ir color_fg=30
+declare -ir color_bg=40
+declare -ir color_bright=60
+declare -ir color_black=0
+declare -ir color_red=1
+declare -ir color_green=2
+declare -ir color_yellow=3
+declare -ir color_blue=4
+declare -ir color_magenta=5
+declare -ir color_cyan=6
+declare -ir color_white=7
+
+# generate errors if unset vars are used.
+set -o nounset
 
 # function error_exit {
 #     echo "Got ERR signal from: <$BASH_COMMAND> (${FUNCNAME[1]}:${BASH_LINENO[0]})"
@@ -62,19 +58,31 @@ function fn_esc()
 function fn_csi()
 {
 	local _op=$1
-	local _param=$2
+
+	# default to empty if not set
+	local _param=${2:-''}
 
 	# send CSI command to terminal
 	echo -en "\e[${_param}${_op}"
 }
 
+function fn_animate_wait()
+{
+	# we use read insted of sleep because it is in-process
+	local -r _animate_delay=0.02
+	read -sn1 -t $_animate_delay
+}
+
 function fn_read_key()
 {
-	local _result_var=$1
+	local -r _result_var=$1
 	local _read_result
 
 	# read character
 	read -sN1 _read_result
+
+	# default to empty of not set
+	_read_result=${_read_result:-''}
 
 	# check for escape char
 	if [[ $_read_result == $'\x1b' ]]
