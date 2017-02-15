@@ -1,23 +1,29 @@
 ##
 # BIW-BIND - Key binder for BIW Menus
-# 
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 ##
 
-function fn_choose_show()
-{
-	if ! ${BIW_HOME}/biw-hist-chooser.sh
-	then
-		return 1
-	fi
+function fn_biw_init()
+{	
+	# some keys you can bind
+	local -r key_f1='OP'
+	local -r key_f2='OQ'
+	local -r key_f10='[21~'
+	local -r key_f11='[23~'
+	local -r key_f12='[24~'
+	local -r key_up='[A'
+	local -r key_down='[B'
+	local -r key_left='[D'
+	local -r key_right='[C'
 
-	READLINE_LINE=$(cat $BIW_CH_RES_FILE)
-	READLINE_POINT=${#READLINE_LINE}
+	# set bind key here
+	fn_choose_bind $key_down
 
-	rm $BIW_CH_RES_FILE
+	# set the BIW_HOME variable
+	fn_biw_set_home
 }
 
 function fn_choose_bind()
@@ -33,10 +39,23 @@ function fn_choose_bind()
 	bind ${bind_esc_char}:${bind_int_char}
 }
 
+function fn_choose_show()
+{
+	if ! ${BIW_HOME}/biw-hist-chooser.sh
+	then
+		return 1
+	fi
+
+	READLINE_LINE=$(cat $BIW_CH_RES_FILE)
+	READLINE_POINT=${#READLINE_LINE}
+
+	rm $BIW_CH_RES_FILE
+}
+
 function fn_biw_set_home()
 {
 	# file where history result will be saved
-	export BIW_CH_RES_FILE=$HOME/.chooser_history
+	export BIW_CH_RES_FILE=$HOME/.biw_selection
 
 	# save the home dir
 	local _script_name=${BASH_SOURCE[0]}
@@ -48,22 +67,5 @@ function fn_biw_set_home()
 	export BIW_HOME=$_script_dir
 }
 
-function fn_biw_init()
-{
-	fn_biw_set_home
-	
-	# some keys you can bind
-	local -r key_f1='OP'
-	local -r key_f2='OQ'
-	local -r key_f10='[21~'
-	local -r key_f11='[23~'
-	local -r key_f12='[24~'
-	local -r key_up='[A'
-	local -r key_down='[B'
-	local -r key_left='[D'
-	local -r key_right='[C'
-
-	fn_choose_bind $key_down
-}
-
+# Activate bindings
 fn_biw_init

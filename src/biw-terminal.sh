@@ -1,6 +1,5 @@
 ##
-# BIW-UTIL - Bash Inline Widgets Utilities
-# 
+# BIW-TERMINAL - BIW Terminal Control
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
@@ -43,16 +42,6 @@ readonly decg_t_top='\e(0\x77\e(B'
 readonly decg_t_bottom='\e(0\x76\e(B'
 readonly decg_block='\e(0\xe1\e(B'
 
-# generate errors if unset vars are used.
-set -o nounset
-
-# function error_exit {
-#     echo "Got ERR signal from: <$BASH_COMMAND> (${FUNCNAME[1]}:${BASH_LINENO[0]})"
-#     return
-# }
-
-# trap "error_exit 'Received signal ERR'" ERR
-
 function fn_esc()
 {
 	local _op=$1
@@ -70,13 +59,6 @@ function fn_csi()
 
 	# send CSI command to terminal
 	echo -en "\e[${_param}${_op}"
-}
-
-function fn_animate_wait()
-{
-	# we use read insted of sleep because it is in-process
-	local -r _animate_delay=0.015
-	read -sn1 -t $_animate_delay
 }
 
 function fn_read_key()
@@ -99,4 +81,11 @@ function fn_read_key()
 
 	# set result
 	eval $_result_var=$_read_result
+}
+
+function fn_animate_wait()
+{
+	# we use read insted of sleep because it is in-process
+	local -r _animate_delay=0.015
+	read -sn1 -t $_animate_delay
 }
