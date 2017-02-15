@@ -6,44 +6,127 @@
 # reserved. See LICENSE.
 ##
 
-# event types
-readonly biw_event_show=0
-readonly biw_event_up=1
-readonly biw_event_down=2
-
-# function error_exit {
-#     echo "Got ERR signal from: <$BASH_COMMAND> (${FUNCNAME[1]}:${BASH_LINENO[0]})"
-#     return
-# }
-
-# trap "error_exit 'Received signal ERR'" ERR
-
 # generate errors if unset vars are used.
 set -o nounset
 
+# event types
+readonly biw_event_init=0
+readonly biw_event_up=1
+readonly biw_event_down=2
+readonly biw_event_left=3
+readonly biw_event_right=4
+
 source ${BIW_HOME}/biw-terminal.sh
-source ${BIW_HOME}/biw-chooser.sh
+source ${BIW_HOME}/biw-vmenu.sh
+source ${BIW_HOME}/biw-hmenu.sh
+
+# global widget params
+declare -ri biw_margin=10
+declare -ri biw_color_text=$sgr_color_black
+declare -ri biw_color_active=$sgr_color_red
+declare -ri biw_color_inactive=$sgr_color_blue
+
+declare -r biw_menu_history="History"
+declare -r biw_menu_comp="FileCompl"
+declare -r biw_menu_config="Config"
+
+function fn_biw_main()
+{
+	# truncate result file
+	:> $BIW_CH_RES_FILE
+
+	local -a _hmenu_values=($biw_menu_history $biw_menu_comp $biw_menu_config)
+	fn_hmenu_init _hmenu_values[@]
+
+	# show the widgets
+	fn_biw_show
+
+	# get result from index
+	local _result=${vmenu_data_values[$vmenu_idx_active]}
+
+	# save to temporary file
+	echo $_result > $BIW_CH_RES_FILE
+}
+
+fn_vmenu_reload()
+{
+	local -r _menu_val=${hmenu_data_values[$hmenu_idx_active]}
+	local -i _values_max=30
+	local -a _values=()
+	local _data_command
+
+	case $_menu_val in
+		$biw_menu_history)
+			_data_command="fc -lnr -$_values_max"
+			;;
+		$biw_menu_comp)
+			_data_command="compgen -A file ${READLINE_LINE}"
+			;;
+		$biw_menu_config)
+			_data_command='echo -e conf1\nconf2\nconf3'
+			;;
+	esac
+
+	# read command into _values
+	mapfile -t -n $_values_max _values < <($_data_command)
+
+	# remove first 2 leading blanks for history case
+	_values=("${_values[@]#[[:blank:]][[:blank:]]}")
+
+	fn_vmenu_init _values[@]
+}
+
+function fm_biw_controller()
+{
+	local -r _event=$1
+
+	case $_event in
+		$biw_event_init)
+			fn_vmenu_reload
+			fn_hmenu_redraw
+			fn_vmenu_redraw
+			;;
+		$biw_event_up)
+			fn_vmenu_up
+			;;
+		$biw_event_down)
+			fn_vmenu_down
+			;;
+		$biw_event_left)
+			fm_hmenu_left
+			fn_vmenu_reload
+			fn_vmenu_redraw
+			;;
+		$biw_event_right)
+			fm_hmenu_right
+			fn_vmenu_reload
+			fn_vmenu_redraw
+			;;
+	esac
+}
 
 function fn_biw_show()
 {
-	local _active_focus=fn_choose_router
-
-	# state variables
-	local -i _choose_idx_start
-	local -i _choose_idx_end
+	local -i _panel_height=$((vmenu_height + hmenu_height))
 
 	fn_biw_open
-	$_active_focus $biw_event_show
+	fm_biw_controller $biw_event_init
 
 	local _key
 	while fn_read_key "_key"
 	do
 		case $_key in
-			'[A')
-				$_active_focus $biw_event_up
+			$key_up)
+				fm_biw_controller $biw_event_up
 				;;
-			'[B')
-				$_active_focus $biw_event_down
+			$key_down)
+				fm_biw_controller $biw_event_down
+				;;
+			$key_left)
+				fm_biw_controller $biw_event_left
+				;;
+			$key_right)
+				fm_biw_controller $biw_event_right
 				;;
 			'') 
 				# enter key hit
@@ -56,6 +139,13 @@ function fn_biw_show()
 	done
 
 	fn_biw_close
+}
+
+function fn_biw_cursor_home()
+{
+	# position the cursor at the start of the menu
+	fn_esc $esc_restore_cursor
+	fn_csi $csi_row_up $_panel_height
 }
 
 function fn_biw_open()
@@ -74,27 +164,25 @@ function fn_biw_open()
 	fn_esc $esc_save_cursor
 
 	# animate open
-	for _line_idx in $(eval echo {1..$choose_height})
+	for _line_idx in $(eval echo {1..$_panel_height})
 	do
-		fn_csi $csi_row_up 1
 		fn_csi $csi_scroll_up 1
-		fn_csi $csi_row_insert 1
 		fn_animate_wait
 	done
 
 	# non-animated open:
-	#fn_csi $csi_scroll_up $choose_height
-	#fn_choose_cursor_home
-	#fn_csi $csi_row_insert $choose_height
+	#fn_csi $csi_scroll_up $_panel_height
+	#fn_biw_cursor_home
+	#fn_csi $csi_row_insert $_panel_height
 }
 
 function fn_biw_close()
 {
 	# goto home position
-	fn_choose_cursor_home
+	fn_biw_cursor_home
 
 	# animate close
-	for _line_idx in $(eval echo {1..$choose_height})
+	for _line_idx in $(eval echo {1..$_panel_height})
 	do
 		fn_csi $csi_row_delete 1
 		fn_csi $csi_scroll_down 1
@@ -103,8 +191,8 @@ function fn_biw_close()
 	done
 
 	# non-animate close:
-	#fn_csi $csi_row_delete $choose_height
-	#fn_csi $csi_scroll_down $choose_height
+	#fn_csi $csi_row_delete $_panel_height
+	#fn_csi $csi_scroll_down $_panel_height
 
 	# restore original cursor position
 	fn_esc $esc_restore_cursor

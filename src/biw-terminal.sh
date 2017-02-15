@@ -23,24 +23,34 @@ readonly csi_set_color='m'
 readonly csi_cursor_hide='?25l'
 readonly csi_cursor_show='?25h'
 
+readonly sgr_bold=1
+readonly sgr_underline=4
+readonly sgr_invert=7
+
 # color codes
-readonly color_fg=30
-readonly color_bg=40
-readonly color_bright=60
-readonly color_black=0
-readonly color_red=1
-readonly color_green=2
-readonly color_yellow=3
-readonly color_blue=4
-readonly color_magenta=5
-readonly color_cyan=6
-readonly color_white=7
+readonly sgr_color_fg=30
+readonly sgr_color_bg=40
+readonly sgr_color_bright=60
+readonly sgr_color_black=0
+readonly sgr_color_red=1
+readonly sgr_color_green=2
+readonly sgr_color_yellow=3
+readonly sgr_color_blue=4
+readonly sgr_color_magenta=5
+readonly sgr_color_cyan=6
+readonly sgr_color_white=7
 
 # codes for DEC graphics charset
 readonly decg_hz_line='\e(0\x78\e(B'
 readonly decg_t_top='\e(0\x77\e(B'
 readonly decg_t_bottom='\e(0\x76\e(B'
 readonly decg_block='\e(0\xe1\e(B'
+
+# input keys
+readonly key_up='[A'
+readonly key_down='[B'
+readonly key_left='[D'
+readonly key_right='[C'
 
 function fn_esc()
 {

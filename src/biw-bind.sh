@@ -8,6 +8,9 @@
 
 function fn_biw_init()
 {	
+	fn_check_interactive
+	fn_biw_set_env
+
 	# some keys you can bind
 	local -r key_f1='OP'
 	local -r key_f2='OQ'
@@ -21,9 +24,6 @@ function fn_biw_init()
 
 	# set bind key here
 	fn_choose_bind $key_down
-
-	# set the BIW_HOME variable
-	fn_biw_set_home
 }
 
 function fn_choose_bind()
@@ -52,7 +52,16 @@ function fn_choose_show()
 	rm $BIW_CH_RES_FILE
 }
 
-function fn_biw_set_home()
+function fn_check_interactive()
+{
+	if [[ ! "$-" =~ "i" ]]
+	then
+		echo "ERROR: This script must be sourced and not executed."
+		exit 1
+	fi
+}
+
+function fn_biw_set_env()
 {
 	# file where history result will be saved
 	export BIW_CH_RES_FILE=$HOME/.biw_selection
@@ -60,6 +69,12 @@ function fn_biw_set_home()
 	# save the home dir
 	local _script_name=${BASH_SOURCE[0]}
 	local _script_dir=${_script_name%/*}
+
+	if [ "$_script_name" == "$_script_dir" ]
+	then
+		# _script name has no path
+		_script_dir="."
+	fi
 
 	# convert to absolute path
 	_script_dir=$(cd $_script_dir; pwd -P)
