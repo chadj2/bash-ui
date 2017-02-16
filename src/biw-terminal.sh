@@ -54,48 +54,48 @@ readonly key_right='[C'
 
 function fn_esc()
 {
-	local _op=$1
+    local _op=$1
 
-	# send ESC command to terminal
-	echo -en "\e${_op}"
+    # send ESC command to terminal
+    echo -en "\e${_op}"
 }
 
 function fn_csi()
 {
-	local _op=$1
+    local _op=$1
 
-	# default to empty if not set
-	local _param=${2:-''}
+    # default to empty if not set
+    local _param=${2:-''}
 
-	# send CSI command to terminal
-	echo -en "\e[${_param}${_op}"
+    # send CSI command to terminal
+    echo -en "\e[${_param}${_op}"
 }
 
 function fn_read_key()
 {
-	local -r _result_var=$1
-	local _read_result
+    local -r _result_var=$1
+    local _read_result
 
-	# read character
-	read -sN1 _read_result
+    # read character
+    read -sN1 _read_result
 
-	# default to empty of not set
-	_read_result=${_read_result:-''}
+    # default to empty of not set
+    _read_result=${_read_result:-''}
 
-	# check for escape char
-	if [[ $_read_result == $'\x1b' ]]
-	then
-		# read the rest of the escape code
-		read -t 0.1 -sN2 _read_result
-	fi
+    # check for escape char
+    if [[ $_read_result == $'\x1b' ]]
+    then
+        # read the rest of the escape code
+        read -t 0.1 -sN2 _read_result
+    fi
 
-	# set result
-	eval $_result_var=$_read_result
+    # set result
+    eval $_result_var=$_read_result
 }
 
 function fn_animate_wait()
 {
-	# we use read insted of sleep because it is in-process
-	local -r _animate_delay=0.015
-	read -sn1 -t $_animate_delay
+    # we use read insted of sleep because it is in-process
+    local -r _animate_delay=0.015
+    read -sn1 -t $_animate_delay
 }
