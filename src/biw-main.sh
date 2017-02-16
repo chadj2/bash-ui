@@ -207,3 +207,6 @@ function fn_biw_close()
     # remove signal handler
     trap - SIGHUP SIGINT SIGTERM
 }
+
+# entry point
+fn_biw_main

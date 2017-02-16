@@ -41,7 +41,7 @@ function fn_choose_bind()
 
 function fn_choose_show()
 {
-    if ! ${BIW_HOME}/biw-hist-chooser.sh
+    if ! ${BIW_HOME}/biw-main.sh
     then
         return 1
     fi
