@@ -1,5 +1,5 @@
 ##
-# BIW-TERMINAL - BIW Terminal Control
+# BIW-TOOLS - Bash Inline Widget Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
@@ -23,14 +23,18 @@ readonly csi_set_color='m'
 readonly csi_cursor_hide='?25l'
 readonly csi_cursor_show='?25h'
 
-readonly sgr_bold=1
-readonly sgr_underline=4
-readonly sgr_invert=7
+# SGR control codes
+readonly sgr_attr_default=0
+readonly sgr_attr_bold=1
+readonly sgr_attr_underline=4
+readonly sgr_attr_invert=7
+
+# prefixes to be used with colors
+readonly sgr_prefix_fg=30
+readonly sgr_prefix_bg=40
+readonly sgr_prefix_bright=60
 
 # color codes
-readonly sgr_color_fg=30
-readonly sgr_color_bg=40
-readonly sgr_color_bright=60
 readonly sgr_color_black=0
 readonly sgr_color_red=1
 readonly sgr_color_green=2
@@ -39,18 +43,22 @@ readonly sgr_color_blue=4
 readonly sgr_color_magenta=5
 readonly sgr_color_cyan=6
 readonly sgr_color_white=7
+readonly sgr_color_default=9
 
 # codes for DEC graphics charset
 readonly decg_hz_line='\e(0\x78\e(B'
 readonly decg_t_top='\e(0\x77\e(B'
 readonly decg_t_bottom='\e(0\x76\e(B'
-readonly decg_block='\e(0\xe1\e(B'
+readonly decg_block='\e(0\x61\e(B'
+readonly decg_bullet='\e(0\x7e\e(B'
+readonly decg_diamond='\e(0\x60\e(B'
 
 # input keys
 readonly key_up='[A'
 readonly key_down='[B'
 readonly key_left='[D'
 readonly key_right='[C'
+readonly key_eol='eol'
 
 function fn_esc()
 {
@@ -80,7 +88,7 @@ function fn_read_key()
     read -sN1 _read_result
 
     # default to empty of not set
-    _read_result=${_read_result:-''}
+    _read_result=${_read_result:-${key_eol}}
 
     # check for escape char
     if [[ $_read_result == $'\x1b' ]]

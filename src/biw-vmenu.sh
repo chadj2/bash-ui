@@ -1,130 +1,156 @@
 ##
-# BIW-VMENU - BIW Horizontal Scrollable Menu
+# BIW-TOOLS - Bash Inline Widget Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 ##
 
-# Indexes
+# Data indexes
 declare -i vmenu_idx_active
 declare -i vmenu_idx_last
-declare -i vmenu_idx_start
-declare -i vmenu_idx_end
-
-# Data
 declare -a vmenu_data_values
-declare -i vmenu_data_size
+
+# indexes at the top and bottom of panel
+declare -i vmenu_idx_panel_top
+
+# last index in panel that has data
+declare -i vmenu_idx_panel_end
 
 # Layout
 declare -ri vmenu_width=50
 declare -ri vmenu_height=8
 
-# Colors
-declare -ri vmenu_color_slider_bar=$sgr_color_cyan
-declare -ri vmenu_color_handle=$sgr_color_yellow
+# placeholder for empty data set
+declare -r vmenu_empty_text="<empty>"
 
+# if non-zero then an indicator will show a row as being "checked".
+declare -i vmenu_idx_checked=-1
+
+# debug statistics only
+declare -i vmenu_idx_redraws=0
 
 function fn_vmenu_init()
 {
     # get refrence to array with menu entries
-    vmenu_data_values=("${!1}")
-    vmenu_data_size=${#vmenu_data_values[*]}
-
-    # setup index values
-    vmenu_idx_active=0
+    vmenu_data_values=( "${!1-$vmenu_empty_text}" )
+    local -i vmenu_data_size=${#vmenu_data_values[*]}
     vmenu_idx_last=$((vmenu_data_size - 1))
-    vmenu_idx_start=$vmenu_idx_active
-    vmenu_idx_end=$((vmenu_idx_active + vmenu_height - 1))
 
-    # adjust the last index if there are not enough values to display
-    if((vmenu_idx_end > vmenu_idx_last))
+    # set active index if passed as an argument. Else default to 0.
+    vmenu_idx_active=${2:-0}
+    vmenu_idx_checked=-1
+
+    # if data set fits entirely in the window then there is no need for
+    # scrolling
+    if ((vmenu_data_size < vmenu_height))
     then
-        vmenu_idx_end=$vmenu_idx_last
+        vmenu_idx_panel_top=0
+    else
+        vmenu_idx_panel_top=$vmenu_idx_active
     fi
 }
 
-function fn_vmenu_down()
+fn_vmenu_actions()
+{
+    local _key=$1
+
+    case "$_key" in
+        $key_up)
+            fn_vmenu_action_up || return $biw_act_terminate
+            ;;
+        $key_down)
+            fn_vmenu_action_down || return $biw_act_terminate
+            ;;
+    esac
+
+    return $biw_act_continue
+}
+
+function fn_vmenu_get_current_val()
+{
+    echo ${vmenu_data_values[$vmenu_idx_active]}
+}
+
+function fn_vmenu_action_down()
 {
     if ((vmenu_idx_active >= vmenu_idx_last))
     then
         # we are at the end of the data so we can't move
-        return
+        return $biw_act_terminate
     fi
 
     # move active index
     ((vmenu_idx_active += 1))
 
-    if ((vmenu_idx_active > vmenu_idx_end))
+    if ((vmenu_idx_active > vmenu_idx_panel_end))
     then
         # new index has exceeded the bounds of the window
-        ((vmenu_idx_start += 1))
-        ((vmenu_idx_end += 1))
+        ((vmenu_idx_panel_top += 1))
         fn_vmenu_redraw
     else
         # redraw affected rows
         fn_vmenu_draw_row $((vmenu_idx_active - 1))
         fn_vmenu_draw_row $vmenu_idx_active
     fi
+
+    return $biw_act_continue
 }
 
-function fn_vmenu_up()
+function fn_vmenu_action_up()
 {
     if ((vmenu_idx_active <= 0))
     then
         # we are at the start of the data so we can't move
-        return
+        return $biw_act_terminate
     fi
 
     ((vmenu_idx_active -= 1))
 
-    if ((vmenu_idx_active < vmenu_idx_start))
+    if ((vmenu_idx_active < vmenu_idx_panel_top))
     then
         # new index has exceeded the bounds of the window
-        ((vmenu_idx_start -= 1))
-        ((vmenu_idx_end -= 1))
+        ((vmenu_idx_panel_top -= 1))
         fn_vmenu_redraw
     else
         # redraw affected rows
         fn_vmenu_draw_row $((vmenu_idx_active + 1))
         fn_vmenu_draw_row $vmenu_idx_active
     fi
-}
 
-function fn_vmenu_move_bounds()
-{
-    # location is specified by the start
-    vmenu_idx_start=$1
-
-    # end is calculateed
-    vmenu_idx_end=$((vmenu_idx_start + vmenu_height - 1))
-    fn_vmenu_redraw
+    return $biw_act_continue
 }
 
 function fn_vmenu_redraw()
 {
-    local -i _redraw_idx_end=$((vmenu_idx_start + vmenu_height - 1))
+    local -i vmenu_idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_height - 1))
+
+    # adjust the last index if there are not enough values to display
+    vmenu_idx_panel_end=${vmenu_idx_panel_bottom}
+
+    if((vmenu_idx_panel_end > vmenu_idx_last))
+    then
+        vmenu_idx_panel_end=$vmenu_idx_last
+    fi
+
     # calculate indexes to draw
-    local _indexes=$(eval echo {$vmenu_idx_start..$_redraw_idx_end})
-    #echo -n "{$vmenu_idx_start..$_redraw_idx_end}"
+    local _indexes=$(eval echo {$vmenu_idx_panel_top..$vmenu_idx_panel_bottom})
 
     # draw all menu items
     for _line_idx in ${_indexes}
     do
         fn_vmenu_draw_row $_line_idx
     done
+
+    ((vmenu_idx_redraws++))
 }
 
-function fm_move_cursor()
+function fn_move_cursor()
 {
     local -i _line_idx=$1
-    local -i _abs_index=$((_line_idx - vmenu_idx_start))
-
     fn_esc $esc_restore_cursor
-    #echo "${_line_idx}, ${vmenu_idx_start}"
-
+    local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
     fn_csi $csi_row_up $((vmenu_height - _abs_index))
-    #fn_csi $csi_row_up $((vmenu_height - _abs_index))
 }
 
 function fn_vmenu_draw_row()
@@ -132,7 +158,7 @@ function fn_vmenu_draw_row()
     local -i _line_idx=$1
 
     # position cursor
-    fm_move_cursor $_line_idx
+    fn_move_cursor $_line_idx
     fn_csi $csi_col_pos $biw_margin
 
     if((_line_idx > vmenu_idx_last))
@@ -142,11 +168,72 @@ function fn_vmenu_draw_row()
         return
     fi
 
-    # set text color (BG will be set later)
-    fn_csi $csi_set_color $((sgr_color_fg + biw_color_text))
-
-    fn_vmenu_draw_selection $_line_idx
+    fn_menu_draw_indicator $_line_idx
+    local -i _line_offset=$?
+    fn_vmenu_draw_selection $_line_idx $_line_offset
     fn_vmenu_draw_slider $_line_idx
+
+    # reset colors
+    fn_csi $csi_set_color $sgr_attr_default
+}
+
+function fn_menu_draw_indicator()
+{
+    local -i _line_idx=$1
+    local _line_indicator
+    local -i _line_indicator_size
+
+    if ((vmenu_idx_checked >= 0))
+    then
+        _line_indicator_size=1
+        _line_indicator=' '
+
+        if((_line_idx == vmenu_idx_checked))
+        then
+            _line_indicator=$decg_diamond
+        fi
+    else
+        _line_indicator=$_line_idx
+        _line_indicator_size=${#_line_indicator}
+    fi
+
+    _line_indicator="[${_line_indicator}]"
+    ((_line_indicator_size += 2))
+
+    if ((vmenu_idx_active == _line_idx))
+    then
+        fn_theme_set_bg_attr $theme_attr_sl_active
+    else
+        fn_theme_set_bg_attr $theme_attr_sl_inactive
+    fi
+
+    echo -en "${_line_indicator}"
+
+    return $_line_indicator_size
+}
+
+function fn_vmenu_draw_selection()
+{
+    local -i _line_idx=$1
+    local -i _line_offset=$2
+
+    # get line data from array and add space padding
+    local _line_result=" ${vmenu_data_values[$_line_idx]}"
+
+    # pad and trim line
+    local -i _padding_size=$((vmenu_width - _line_offset))
+    printf -v _line_result "%-${_padding_size}s" "${_line_result}"
+    _line_result="${_line_result:0:${_padding_size}}"
+
+    if ((vmenu_idx_active == _line_idx))
+    then
+        fn_theme_set_bg_attr $theme_attr_active
+    else
+        fn_theme_set_bg_attr $theme_attr_background
+    fi
+
+    # output line
+    echo -n "${_line_result}"
 }
 
 function fn_vmenu_draw_slider()
@@ -154,7 +241,7 @@ function fn_vmenu_draw_slider()
     local -i _line_idx=$1
     local _last_char=$decg_hz_line
 
-    if ((_line_idx == vmenu_idx_start))
+    if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
@@ -163,7 +250,7 @@ function fn_vmenu_draw_slider()
         else
             _last_char='^'
         fi
-    elif ((_line_idx == vmenu_idx_end))
+    elif ((_line_idx == vmenu_idx_panel_end))
     then
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
@@ -174,47 +261,13 @@ function fn_vmenu_draw_slider()
         fi
     fi
 
-    local -i _slider_color=$vmenu_color_slider_bar
-
     if ((vmenu_idx_active == _line_idx))
     then
-        _slider_color=$vmenu_color_handle
+        fn_theme_set_bg_attr $theme_attr_sl_active
+    else
+        fn_theme_set_bg_attr $theme_attr_sl_inactive
     fi
 
-    fn_csi $csi_set_color $((sgr_color_fg + biw_color_text))
-    fn_csi $csi_set_color $((sgr_color_bg + _slider_color))
     echo -en "${_last_char}"
-
-    # reset colors
-    fn_csi $csi_set_color 0
 }
 
-function fn_vmenu_draw_selection()
-{
-    local -i _line_idx=$1
-    local -i _panel_color=$biw_color_inactive
-
-    if ((vmenu_idx_active == _line_idx))
-    then
-        _panel_color=$biw_color_active
-        #fn_csi $csi_set_color $sgr_underline
-    fi
-
-    # get line data from array
-    local _line_result="${vmenu_data_values[$_line_idx]}"
-
-    # selection contents
-    _line_result="[${_line_idx}] ${_line_result}"
-
-    # pad and trim line
-    printf -v _line_result "%-${vmenu_width}s" "${_line_result}"
-    _line_result="${_line_result:0:${vmenu_width}}"
-
-    # output line
-    fn_csi $csi_set_color $((sgr_color_fg + biw_color_text))
-    fn_csi $csi_set_color $((sgr_color_bg + _panel_color))
-    echo -n "${_line_result}"
-
-    # reset colors
-    fn_csi $csi_set_color 0
-}

@@ -1,5 +1,5 @@
 ##
-# BIW-BIND - Key binder for BIW Menus
+# BIW-TOOLS - Bash Inline Widget Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
