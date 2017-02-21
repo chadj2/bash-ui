@@ -10,7 +10,8 @@
 # generate errors if unset vars are used.
 set -o nounset
 
-source ${BIW_HOME}/biw-terminal.sh
+source ${BIW_HOME}/biw-term-csi.sh
+source ${BIW_HOME}/biw-term-sgr.sh
 source ${BIW_HOME}/biw-theme.sh
 source ${BIW_HOME}/biw-vmenu.sh
 source ${BIW_HOME}/biw-hmenu.sh
@@ -66,14 +67,14 @@ function fn_biw_show()
     fn_biw_debug_stats
 
     local _key
-    while fn_read_key _key
+    while fn_csi_read_key _key
     do
         fn_biw_all_actions "$_key"
         local _result=$?
         fn_biw_debug_stats
         (( $_result == $biw_act_terminate )) && continue
 
-        if [ "$_key" == $key_eol ]
+        if [ "$_key" == $csi_key_eol ]
         then
             # we got the enter key so close the menu
             break
@@ -102,7 +103,7 @@ fn_biw_menu_actions()
 
     # update vmenu if hmenu is changed
     case "$_key" in
-        $key_left|$key_right)
+        $csi_key_left|$csi_key_right)
             fn_biw_reload_vmenu
             return $biw_act_terminate
             ;;
@@ -122,7 +123,7 @@ fn_biw_theme_actions()
     fi
 
     case "$_key" in
-        $key_up|$key_down)
+        $csi_key_up|$csi_key_down)
             # use the vmenu index to determine the selected theme
             fn_theme_set_idx_active $vmenu_idx_active
 
@@ -130,7 +131,7 @@ fn_biw_theme_actions()
             fn_hmenu_redraw
             fn_vmenu_redraw
             ;;
-        $key_eol) 
+        $csi_key_eol) 
             # Save selected Theme
             vmenu_idx_checked=$theme_active_idx
             fn_theme_save
@@ -182,8 +183,8 @@ fn_biw_vmenu_init_command()
 function fn_biw_cursor_home()
 {
     # position the cursor at the start of the menu
-    fn_esc $esc_restore_cursor
-    fn_csi $csi_row_up $_panel_height
+    fn_csi_op $csi_op_cursor_restore
+    fn_csi_op $csi_op_row_up $_panel_height
 }
 
 function fn_biw_open()
@@ -199,22 +200,22 @@ function fn_biw_open()
     stty -echo
 
     # hide the cursor to eliminate flicker
-    fn_csi $csi_cursor_hide
+    fn_csi_op $csi_op_cursor_hide
 
     # save the cursor for a "home position"
-    fn_esc $esc_save_cursor
+    fn_csi_op $csi_op_cursor_save
 
     # animate open
     for _line_idx in $(eval echo {1..$_panel_height})
     do
-        fn_csi $csi_scroll_up 1
-        fn_animate_wait
+        fn_csi_op $csi_op_scroll_up 1
+        fn_csi_milli_wait
     done
 
     # non-animated open:
-    #fn_csi $csi_scroll_up $_panel_height
+    #fn_csi_op $csi_op_scroll_up $_panel_height
     #fn_biw_cursor_home
-    #fn_csi $csi_row_insert $_panel_height
+    #fn_csi_op $csi_op_row_insert $_panel_height
 }
 
 function fn_biw_close()
@@ -225,21 +226,21 @@ function fn_biw_close()
     # animate close
     for _line_idx in $(eval echo {1..$_panel_height})
     do
-        fn_csi $csi_row_delete 1
-        fn_csi $csi_scroll_down 1
-        fn_csi $csi_row_down 1
-        fn_animate_wait
+        fn_csi_op $csi_op_row_delete 1
+        fn_csi_op $csi_op_scroll_down 1
+        fn_csi_op $csi_op_row_down 1
+        fn_csi_milli_wait
     done
 
     # non-animate close:
-    #fn_csi $csi_row_delete $_panel_height
-    #fn_csi $csi_scroll_down $_panel_height
+    #fn_csi_op $csi_op_row_delete $_panel_height
+    #fn_csi_op $csi_op_scroll_down $_panel_height
 
     # restore original cursor position
-    fn_esc $esc_restore_cursor
+    fn_csi_op $csi_op_cursor_restore
 
     # restore terminal settings
-    fn_csi $csi_cursor_show
+    fn_csi_op $csi_op_cursor_show
 
     # restore terminal settings
     #commenting this out because bash does not like it
@@ -255,10 +256,10 @@ function fn_biw_close()
 function fn_biw_panic()
 {
     # show cursor
-    fn_csi $csi_cursor_show
+    fn_csi_op $csi_op_cursor_show
 
     # restore default colors
-    fn_csi $csi_set_color $sgr_attr_default
+    fn_sgr_set $sgr_attr_default
 
     local _fail_func=${FUNCNAME[1]}
     local _fail_line=${BASH_LINENO[0]}
@@ -283,7 +284,8 @@ fn_biw_debug_stats()
         return
     fi
 
-    fn_esc $esc_restore_cursor
+    fn_csi_op $csi_op_cursor_restore
+
     echo -n "redraw_h(${hmenu_idx_redraws}) redraw_v(${vmenu_idx_redraws}) "
     echo -n "theme_s(${theme_saved_idx}) theme_a(${theme_active_idx}) "
 }

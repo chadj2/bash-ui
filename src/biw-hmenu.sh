@@ -33,10 +33,10 @@ fn_hmenu_actions()
 {
     local _key=$1
     case "$_key" in
-        $key_left)
+        $csi_key_left)
             fn_hmenu_action_left || return $biw_act_terminate
             ;;
-        $key_right)
+        $csi_key_right)
             fn_hmenu_action_right || return $biw_act_terminate
             ;;
     esac
@@ -122,10 +122,10 @@ function fn_hmenu_draw_item()
         fn_theme_set_bg_attr $theme_attr_background
     fi
 
-    fn_csi $csi_col_pos $((biw_margin + _item_idx*hmenu_item_width))
-    fn_csi $csi_set_color $sgr_attr_underline
+    fn_csi_op $csi_op_col_pos $((biw_margin + _item_idx*hmenu_item_width))
+    fn_sgr_set $sgr_attr_underline
     echo -n "$_item_value"
 
     # reset colors
-    fn_csi $csi_set_color $sgr_attr_default
+    fn_sgr_set $sgr_attr_default
 }

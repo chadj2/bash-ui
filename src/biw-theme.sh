@@ -23,15 +23,15 @@ declare -ri theme_attr_sl_active=5
 declare -ra theme_type_bright=(
     [$theme_attr_name]="Bright"
     [$theme_attr_foreground]=$sgr_color_black
-    [$theme_attr_background]=$((sgr_color_blue + sgr_prefix_bright))
-    [$theme_attr_active]=$((sgr_color_red + sgr_prefix_bright))
-    [$theme_attr_sl_inactive]=$((sgr_color_cyan + sgr_prefix_bright))
-    [$theme_attr_sl_active]=$((sgr_color_yellow + sgr_prefix_bright))
+    [$theme_attr_background]=$((sgr_color_blue + sgr_attr_bright))
+    [$theme_attr_active]=$((sgr_color_red + sgr_attr_bright))
+    [$theme_attr_sl_inactive]=$((sgr_color_cyan + sgr_attr_bright))
+    [$theme_attr_sl_active]=$((sgr_color_yellow + sgr_attr_bright))
 )
 
 declare -ra theme_type_dark=(
     [$theme_attr_name]="Dark"
-    [$theme_attr_foreground]=$((sgr_color_white + sgr_prefix_bright))
+    [$theme_attr_foreground]=$((sgr_color_white + sgr_attr_bright))
     [$theme_attr_background]=$sgr_color_black
     [$theme_attr_active]=$sgr_color_red
     [$theme_attr_sl_inactive]=$sgr_color_black
@@ -49,7 +49,7 @@ declare -ra theme_type_mono=(
 
 declare -ra theme_type_matrix=(
     [$theme_attr_name]="Matrix"
-    [$theme_attr_foreground]=$(($sgr_color_green + sgr_prefix_bright))
+    [$theme_attr_foreground]=$(($sgr_color_green + sgr_attr_bright))
     [$theme_attr_background]=$sgr_color_black
     [$theme_attr_active]=$theme_sgr_attr_invert
     [$theme_attr_sl_inactive]=$sgr_color_black
@@ -58,8 +58,8 @@ declare -ra theme_type_matrix=(
 
 declare -ra theme_type_impact=(
     [$theme_attr_name]="Impact"
-    [$theme_attr_foreground]=$((sgr_color_yellow + sgr_prefix_bright))
-    [$theme_attr_background]=$((sgr_color_black + sgr_prefix_bright))
+    [$theme_attr_foreground]=$((sgr_color_yellow + sgr_attr_bright))
+    [$theme_attr_background]=$((sgr_color_black + sgr_attr_bright))
     [$theme_attr_active]=$((sgr_color_blue))
     [$theme_attr_sl_inactive]=$((sgr_color_red))
     [$theme_attr_sl_active]=$theme_sgr_attr_invert
@@ -172,7 +172,7 @@ function fn_theme_set_bg_attr()
     local -i _bg_attr_name=$1
     local -i _sgr_modifier=$sgr_attr_default
     
-    fn_theme_get_sgr $sgr_prefix_bg $_bg_attr_name
+    fn_theme_get_sgr $sgr_attr_bg $_bg_attr_name
     local -i _sgr_bg_color=$?
 
     if ((_sgr_bg_color < theme_sgr_base))
@@ -181,15 +181,15 @@ function fn_theme_set_bg_attr()
         _sgr_modifier=$_sgr_bg_color
 
         # use the default background color
-        fn_theme_get_sgr $sgr_prefix_bg $theme_attr_background
+        fn_theme_get_sgr $sgr_attr_bg $theme_attr_background
         _sgr_bg_color=$?
     fi
 
-    fn_theme_get_sgr $sgr_prefix_fg $theme_attr_foreground
+    fn_theme_get_sgr $sgr_attr_fg $theme_attr_foreground
     local -i _sgr_fg_color=$?
 
     # send triplet command
-    fn_csi $csi_set_color "${_sgr_modifier};${_sgr_fg_color};${_sgr_bg_color}"
+    fn_sgr_set "${_sgr_modifier};${_sgr_fg_color};${_sgr_bg_color}"
 }
 
 function fn_theme_get_sgr()
@@ -199,7 +199,7 @@ function fn_theme_get_sgr()
     local -i _attr_val=${theme_active[$_attr_name]}
     local -i _sgr_code_result
 
-    if ((_attr_val >= theme_sgr_base && _attr_val < sgr_prefix_bright))
+    if ((_attr_val >= theme_sgr_base && _attr_val < sgr_attr_bright))
     then
         # This is an attribute and not a color
         _sgr_code_result=$((_attr_val - theme_sgr_base))

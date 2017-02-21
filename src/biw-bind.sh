@@ -9,21 +9,11 @@
 function fn_biw_init()
 {   
     fn_check_interactive
+
     fn_biw_set_env
 
-    # some keys you can bind
-    local -r key_f1='OP'
-    local -r key_f2='OQ'
-    local -r key_f10='[21~'
-    local -r key_f11='[23~'
-    local -r key_f12='[24~'
-    local -r key_up='[A'
-    local -r key_down='[B'
-    local -r key_left='[D'
-    local -r key_right='[C'
-
-    # set bind key here
-    fn_choose_bind $key_down
+    # load keyboard codes
+    source ${BIW_HOME}/biw-term-csi.sh
 }
 
 function fn_choose_bind()
@@ -84,3 +74,6 @@ function fn_biw_set_env()
 
 # Activate bindings
 fn_biw_init
+
+# set bind key here
+fn_choose_bind $csi_key_down

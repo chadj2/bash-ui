@@ -56,10 +56,10 @@ fn_vmenu_actions()
     local _key=$1
 
     case "$_key" in
-        $key_up)
+        $csi_key_up)
             fn_vmenu_action_up || return $biw_act_terminate
             ;;
-        $key_down)
+        $csi_key_down)
             fn_vmenu_action_down || return $biw_act_terminate
             ;;
     esac
@@ -148,9 +148,9 @@ function fn_vmenu_redraw()
 function fn_move_cursor()
 {
     local -i _line_idx=$1
-    fn_esc $esc_restore_cursor
+    fn_csi_op $csi_op_cursor_restore
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
-    fn_csi $csi_row_up $((vmenu_height - _abs_index))
+    fn_csi_op $csi_op_row_up $((vmenu_height - _abs_index))
 }
 
 function fn_vmenu_draw_row()
@@ -159,12 +159,12 @@ function fn_vmenu_draw_row()
 
     # position cursor
     fn_move_cursor $_line_idx
-    fn_csi $csi_col_pos $biw_margin
+    fn_csi_op $csi_op_col_pos $biw_margin
 
     if((_line_idx > vmenu_idx_last))
     then
         # no data to draw so erase row
-        fn_csi $csi_row_erase
+        fn_csi_op $csi_op_row_erase
         return
     fi
 
@@ -174,7 +174,7 @@ function fn_vmenu_draw_row()
     fn_vmenu_draw_slider $_line_idx
 
     # reset colors
-    fn_csi $csi_set_color $sgr_attr_default
+    fn_sgr_set $sgr_attr_default
 }
 
 function fn_menu_draw_indicator()
@@ -190,7 +190,7 @@ function fn_menu_draw_indicator()
 
         if((_line_idx == vmenu_idx_checked))
         then
-            _line_indicator=$decg_diamond
+            _line_indicator=$csi_char_diamond
         fi
     else
         _line_indicator=$_line_idx
@@ -207,7 +207,7 @@ function fn_menu_draw_indicator()
         fn_theme_set_bg_attr $theme_attr_sl_inactive
     fi
 
-    echo -en "${_line_indicator}"
+    echo -n "${_line_indicator}"
 
     return $_line_indicator_size
 }
@@ -239,14 +239,14 @@ function fn_vmenu_draw_selection()
 function fn_vmenu_draw_slider()
 {
     local -i _line_idx=$1
-    local _last_char=$decg_hz_line
+    local _last_char=$csi_char_line_vert
 
     if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
         then
-            _last_char=$decg_t_top
+            _last_char=$csi_char_line_top
         else
             _last_char='^'
         fi
@@ -255,7 +255,7 @@ function fn_vmenu_draw_slider()
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            _last_char=$decg_t_bottom
+            _last_char=$csi_char_line_bottom
         else
             _last_char='v'
         fi
@@ -268,6 +268,6 @@ function fn_vmenu_draw_slider()
         fn_theme_set_bg_attr $theme_attr_sl_inactive
     fi
 
-    echo -en "${_last_char}"
+    echo -n "${_last_char}"
 }
 
