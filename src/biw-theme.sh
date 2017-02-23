@@ -14,53 +14,53 @@ declare -ri TATTR_SGR_INVERT=$((TATTR_SGR_BASE + SGR_ATTR_INVERT))
 
 # Theme option names
 declare -ri TATTR_NAME=0
-declare -ri TATTR_FOREGROUND=1
-declare -ri TATTR_BACKGROUND=2
-declare -ri TATTR_ACTIVE=3
+declare -ri TATTR_TEXT=1
+declare -ri TATTR_BG_INACTIVE=2
+declare -ri TATTR_BG_ACTIVE=3
 declare -ri TATTR_SL_INACTIVE=4
 declare -ri TATTR_SL_ACTIVE=5
 
 declare -ra THEME_TYPE_BRIGHT=(
     [$TATTR_NAME]="Bright"
-    [$TATTR_FOREGROUND]=$SGR_COL_BLACK
-    [$TATTR_BACKGROUND]=$((SGR_COL_BLUE + SGR_ATTR_BRIGHT))
-    [$TATTR_ACTIVE]=$((SGR_COL_RED + SGR_ATTR_BRIGHT))
+    [$TATTR_TEXT]=$SGR_COL_BLACK
+    [$TATTR_BG_INACTIVE]=$((SGR_COL_BLUE + SGR_ATTR_BRIGHT))
+    [$TATTR_BG_ACTIVE]=$((SGR_COL_RED + SGR_ATTR_BRIGHT))
     [$TATTR_SL_INACTIVE]=$((SGR_COL_CYAN + SGR_ATTR_BRIGHT))
     [$TATTR_SL_ACTIVE]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
 )
 
 declare -ra THEME_TYPE_DARK=(
     [$TATTR_NAME]="Dark"
-    [$TATTR_FOREGROUND]=$((SGR_COL_WHITE + SGR_ATTR_BRIGHT))
-    [$TATTR_BACKGROUND]=$SGR_COL_BLACK
-    [$TATTR_ACTIVE]=$SGR_COL_RED
+    [$TATTR_TEXT]=$((SGR_COL_WHITE + SGR_ATTR_BRIGHT))
+    [$TATTR_BG_INACTIVE]=$SGR_COL_BLACK
+    [$TATTR_BG_ACTIVE]=$SGR_COL_RED
     [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
     [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
 declare -ra THEME_TYPE_MONO=(
     [$TATTR_NAME]="Monochrome"
-    [$TATTR_FOREGROUND]=$SGR_COL_DEFAULT
-    [$TATTR_BACKGROUND]=$SGR_COL_DEFAULT
-    [$TATTR_ACTIVE]=$TATTR_SGR_INVERT
+    [$TATTR_TEXT]=$SGR_COL_DEFAULT
+    [$TATTR_BG_INACTIVE]=$SGR_COL_DEFAULT
+    [$TATTR_BG_ACTIVE]=$TATTR_SGR_INVERT
     [$TATTR_SL_INACTIVE]=$TATTR_SGR_INVERT
     [$TATTR_SL_ACTIVE]=$SGR_COL_DEFAULT
 )
 
 declare -ra THEME_TYPE_MATRIX=(
     [$TATTR_NAME]="Matrix"
-    [$TATTR_FOREGROUND]=$(($SGR_COL_GREEN + SGR_ATTR_BRIGHT))
-    [$TATTR_BACKGROUND]=$SGR_COL_BLACK
-    [$TATTR_ACTIVE]=$TATTR_SGR_INVERT
+    [$TATTR_TEXT]=$(($SGR_COL_GREEN + SGR_ATTR_BRIGHT))
+    [$TATTR_BG_INACTIVE]=$SGR_COL_BLACK
+    [$TATTR_BG_ACTIVE]=$TATTR_SGR_INVERT
     [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
     [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
 declare -ra THEME_TYPE_IMPACT=(
     [$TATTR_NAME]="Impact"
-    [$TATTR_FOREGROUND]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
-    [$TATTR_BACKGROUND]=$((SGR_COL_BLACK + SGR_ATTR_BRIGHT))
-    [$TATTR_ACTIVE]=$((SGR_COL_BLUE))
+    [$TATTR_TEXT]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
+    [$TATTR_BG_INACTIVE]=$((SGR_COL_BLACK + SGR_ATTR_BRIGHT))
+    [$TATTR_BG_ACTIVE]=$((SGR_COL_BLUE))
     [$TATTR_SL_INACTIVE]=$((SGR_COL_RED))
     [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
@@ -102,8 +102,6 @@ fn_theme_init()
 
     fn_theme_idx_from_name $_saved_name
     theme_saved_idx=$?
-
-    fn_theme_set_idx_active $theme_saved_idx
 }
 
 function fn_theme_set_idx_active()
@@ -168,6 +166,28 @@ function fn_theme_set_name_list()
     done
 }
 
+function fn_theme_set_attr_default()
+{
+    local -i _is_active=$1
+    if ((_is_active == 0))
+    then
+        fn_theme_set_bg_attr $TATTR_BG_INACTIVE
+    else
+        fn_theme_set_bg_attr $TATTR_BG_ACTIVE
+    fi
+}
+
+function fn_theme_set_attr_slider()
+{
+    local -i _is_active=$1
+    if ((_is_active == 0))
+    then
+        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
+    else
+        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
+    fi
+}
+
 function fn_theme_set_bg_attr()
 {
     local -i _bg_attr_name=$1
@@ -182,11 +202,11 @@ function fn_theme_set_bg_attr()
         _sgr_modifier=$_sgr_bg_color
 
         # use the default background color
-        fn_theme_get_sgr $SGR_ATTR_BG $TATTR_BACKGROUND
+        fn_theme_get_sgr $SGR_ATTR_BG $TATTR_BG_INACTIVE
         _sgr_bg_color=$?
     fi
 
-    fn_theme_get_sgr $SGR_ATTR_FG $TATTR_FOREGROUND
+    fn_theme_get_sgr $SGR_ATTR_FG $TATTR_TEXT
     local -i _sgr_fg_color=$?
 
     # send triplet command
@@ -211,3 +231,6 @@ function fn_theme_get_sgr()
 
     return $_sgr_code_result
 }
+
+# always init theme
+fn_theme_init

@@ -41,7 +41,7 @@ function fn_sgr_print()
 
     if((sgr_buffer_active > 0))
     then
-        sgr_buffer_data+=( "$_out" )
+        sgr_buffer_data+="$_out"
     else
         echo -en "$_out"
     fi
@@ -58,6 +58,11 @@ function fn_sgr_set()
 # Statements will accumulate in sgr_buffer_data.
 function fn_sgr_seq_start()
 {
+    if((sgr_buffer_active > 0))
+    then
+        echo "ERROR: SGR is already in a transaction"
+        exit
+    fi
     sgr_buffer_data=()
     sgr_buffer_active=1
 }
@@ -66,9 +71,6 @@ function fn_sgr_seq_start()
 # This must be called if used with fn_sgr_seq_start.
 function fn_sgr_seq_flush()
 {
-    # add color reset to the end of the buffer
-    fn_sgr_set $SGR_ATTR_DEFAULT
-    
     if((sgr_buffer_active == 0))
     then
         return

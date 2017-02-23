@@ -15,12 +15,14 @@ source ${BIW_HOME}/biw-term-sgr.sh
 source ${BIW_HOME}/biw-theme.sh
 source ${BIW_HOME}/biw-vmenu.sh
 source ${BIW_HOME}/biw-hmenu.sh
+source ${BIW_HOME}/biw-credits.sh
 
 declare -ri BIW_ENABLE_DEBUG=0
 
 # global widget params
 declare -ri BIW_MARGIN=10
 declare -ri BIW_PANEL_HEIGHT=9
+declare -ri BIW_PANEL_WIDTH=50
 
 # max values to load for history and file lists
 declare -ri BIW_VALUES_MAX=30
@@ -30,8 +32,9 @@ declare -ri BIW_ACT_HANDLED=0
 
 # Options for HMenu
 declare -r BIW_MENU_HISTORY="History"
-declare -r BIW_MENU_COMP="FileCompl"
+declare -r BIW_MENU_COMP="File"
 declare -r BIW_MENU_THEME="Theme"
+declare -r BIW_MENU_CREDITS="Credits"
 
 function fn_biw_main()
 {
@@ -41,12 +44,12 @@ function fn_biw_main()
     local -a _hmenu_values=(
         $BIW_MENU_HISTORY 
         $BIW_MENU_COMP 
-        $BIW_MENU_THEME)
+        $BIW_MENU_THEME
+        $BIW_MENU_CREDITS)
 
     fn_hmenu_init _hmenu_values[@]
 
     # show the widgets
-    fn_theme_init
     fn_biw_show
 
     # get result from index
@@ -62,10 +65,8 @@ function fn_biw_show()
     local -r _comp_cmd="compgen -A file ${READLINE_LINE}"
 
     fn_biw_open
-    fn_hmenu_redraw
 
-    local _continue=0
-    while ((_continue == 0))
+    while [ 1 ]
     do
         local _menu_val=$(fn_hmenu_get_current_val)
 
@@ -79,9 +80,16 @@ function fn_biw_show()
             $BIW_MENU_THEME)
                 fn_biw_theme_controller
                 ;;
+            $BIW_MENU_CREDITS)
+                fn_biw_credits_controller
+                ;;
         esac
 
-        _continue=$?
+        # exit if controller gave non-zero status
+        if [ $? != 0 ]
+        then
+            break
+        fi
     done
 
     fn_biw_close
@@ -89,12 +97,23 @@ function fn_biw_show()
 
 function fn_biw_process_key()
 {
-    fn_biw_debug_stats
+    local _result_key=$1
+    local _timeout=${2:-''}
 
-    local _result_var=$1
-    fn_csi_read_key $_result_var
+    # don't print debug if we are animating something 
+    if [ -z "$_timeout" ]
+    then
+        fn_biw_debug_stats
+    fi
 
-    fn_hmenu_actions "$_key"
+    fn_csi_read_key $_result_key $_timeout
+    if [ $? != 0 ]
+    then
+        # got timeout
+        return 0
+    fi
+
+    fn_hmenu_actions "${!_result_key}"
     if [ $? == $BIW_ACT_HANDLED ]
     then
         # hmenu was changed so panel is being switched
@@ -106,10 +125,39 @@ function fn_biw_process_key()
     return 0
 }
 
+function fn_biw_credits_controller()
+{
+    # change to matrix theme
+    fn_theme_idx_from_name THEME_TYPE_MATRIX
+    local -i _theme_idx=$?
+    fn_theme_set_idx_active $_theme_idx
+
+    fn_hmenu_redraw
+
+    # show animation
+    fn_cred_show
+    if [ $? == 0 ]
+    then
+        # if redraw terminated normally then wait for user input
+        local _key
+        while fn_biw_process_key _key
+        do
+            # ignore all input not from hmenu
+            echo -n
+        done
+    fi
+
+    fm_biw_theme_set_default
+
+    return 0
+}
+
 function fn_biw_list_controller()
 {
     local _panel_command=$1
     local -a _values
+
+    fm_biw_theme_set_default
 
     # read command into _values
     mapfile -t -n $BIW_VALUES_MAX _values < <($_panel_command)
@@ -146,16 +194,15 @@ function fn_biw_theme_controller()
     while fn_biw_process_key _key
     do
         fn_vmenu_actions "$_key"
+        if [ $? == $BIW_ACT_HANDLED ]
+        then
+            # use the vmenu index to determine the selected theme
+            fn_theme_set_idx_active $vmenu_idx_active
+            fn_hmenu_redraw
+            fn_vmenu_redraw
+        fi
 
         case "$_key" in
-            $CSI_KEY_UP|$CSI_KEY_DOWN)
-                # use the vmenu index to determine the selected theme
-                fn_theme_set_idx_active $vmenu_idx_active
-
-                # redraw with new theme
-                fn_hmenu_redraw
-                fn_vmenu_redraw
-                ;;
             $CSI_KEY_EOL) 
                 # Save selected Theme
                 fn_theme_save
@@ -167,23 +214,35 @@ function fn_biw_theme_controller()
         esac
     done
 
-    # restore theme from before we previewed
-    fn_theme_set_idx_active $theme_saved_idx
-    fn_hmenu_redraw
-
     return 0
 }
 
-function fn_biw_cursor_home()
+function fn_biw_set_cursor_pos()
 {
-    # position the cursor at the start of the menu
+    local -i _abs_row=$1
+    local -i _abs_col=$2
+
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_UP $BIW_PANEL_HEIGHT
+    fn_csi_op $CSI_OP_ROW_UP $((BIW_PANEL_HEIGHT - _abs_row))
+    fn_biw_set_col_pos $_abs_col
+}
+
+function fn_biw_set_col_pos()
+{
+    local -i _abs_col=$1
+    fn_csi_op $CSI_OP_COL_POS $((BIW_MARGIN + _abs_col))
+}
+
+function fm_biw_theme_set_default()
+{
+    fn_theme_set_idx_active $theme_saved_idx
+    fn_hmenu_redraw
 }
 
 function fn_biw_open()
 {
     # Install panic handler
+    #set -o errexit 
     trap "fn_biw_panic" EXIT
 
     # make sure we call menu close during terminate to restore terminal settings
@@ -200,7 +259,7 @@ function fn_biw_open()
     fn_csi_op $CSI_OP_CURSOR_SAVE
 
     # animate open
-    for _line_idx in $(eval echo {1..$BIW_PANEL_HEIGHT})
+    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
     do
         fn_csi_op $CSI_OP_SCROLL_UP 1
         fn_csi_milli_wait
@@ -214,11 +273,11 @@ function fn_biw_open()
 
 function fn_biw_close()
 {
-    # goto home position
-    fn_biw_cursor_home
+    # position the cursor at the start of the menu
+    fn_biw_set_cursor_pos 0 0
 
     # animate close
-    for _line_idx in $(eval echo {1..$BIW_PANEL_HEIGHT})
+    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
     do
         fn_csi_op $CSI_OP_ROW_DELETE 1
         fn_csi_op $CSI_OP_SCROLL_DOWN 1
@@ -236,10 +295,6 @@ function fn_biw_close()
     # restore terminal settings
     fn_csi_op $CSI_OP_CURSOR_SHOW
 
-    # restore terminal settings
-    #commenting this out because bash does not like it
-    #stty echo
-
     # remove signal handler
     trap - SIGHUP SIGINT SIGTERM
 
@@ -249,8 +304,10 @@ function fn_biw_close()
 
 function fn_biw_panic()
 {
+    set +x
     local _fail_func=${FUNCNAME[1]}
     local _fail_line=${BASH_LINENO[0]}
+    local _command=$BASH_COMMAND
 
     # show cursor
     fn_csi_op $CSI_OP_CURSOR_SHOW
@@ -260,7 +317,7 @@ function fn_biw_panic()
 
     echo
     echo "PANIC Failure at: "
-    echo "<${BASH_COMMAND}>(${_fail_func}:${_fail_line})"
+    echo "<${_command}>(${_fail_func}:${_fail_line})"
     echo
 
     echo "Call stack:"
@@ -280,9 +337,7 @@ fn_biw_debug_stats()
     fi
 
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-
     echo -n "redraw_h(${hmenu_idx_redraws}) redraw_v(${vmenu_idx_redraws}) "
-    echo -n "theme_s(${theme_saved_idx}) theme_a(${theme_active_idx}) "
 }
 
 # entry point

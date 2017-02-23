@@ -67,6 +67,7 @@ function fn_hsl_sat_blocks()
             done
             
             fn_sgr_seq_flush
+            fn_sgr_set $SGR_ATTR_DEFAULT
 
             fn_print_padding $_margin ' '
         done
@@ -112,6 +113,7 @@ function fn_hsl_lum_blocks()
             done
             
             fn_sgr_seq_flush
+            fn_sgr_set $SGR_ATTR_DEFAULT
 
             fn_print_padding $_margin ' '
         done

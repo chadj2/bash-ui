@@ -6,9 +6,6 @@
 # reserved. See LICENSE.
 ##
 
-# Layout
-declare -ri VMENU_WIDTH=50
-
 # placeholder for empty data set
 declare -r VMENU_EMPTY_TEXT="<empty>"
 
@@ -19,6 +16,8 @@ declare -a vmenu_data_values
 
 # panel layout
 declare -i vmenu_height
+declare -i vmenu_width
+declare -i vmenu_row_pos
 
 # indexes at the top and bottom of panel
 declare -i vmenu_idx_panel_top
@@ -34,7 +33,10 @@ declare -i vmenu_idx_redraws=0
 
 function fn_vmenu_init()
 {
+    # Layout
     vmenu_height=$((BIW_PANEL_HEIGHT - HMENU_HEIGHT))
+    vmenu_width=$BIW_PANEL_WIDTH
+    vmenu_row_pos=$HMENU_HEIGHT
 
     # get refrence to array with menu entries
     vmenu_data_values=( "${!1-$VMENU_EMPTY_TEXT}" )
@@ -138,12 +140,9 @@ function fn_vmenu_redraw()
     then
         vmenu_idx_panel_end=$vmenu_idx_last
     fi
-
-    # calculate indexes to draw
-    local _indexes=$(eval echo {$vmenu_idx_panel_top..$vmenu_idx_panel_bottom})
-
+    
     # draw all menu items
-    for _line_idx in ${_indexes}
+    for((_line_idx = vmenu_idx_panel_top; _line_idx <= vmenu_idx_panel_bottom; _line_idx++))
     do
         fn_vmenu_draw_row $_line_idx
     done
@@ -151,21 +150,15 @@ function fn_vmenu_redraw()
     ((vmenu_idx_redraws++))
 }
 
-function fn_move_cursor()
-{
-    local -i _line_idx=$1
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-    local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
-    fn_csi_op $CSI_OP_ROW_UP $((vmenu_height - _abs_index))
-}
 
 function fn_vmenu_draw_row()
 {
     local -i _line_idx=$1
 
     # position cursor
-    fn_move_cursor $_line_idx
-    fn_csi_op $CSI_OP_COL_POS $BIW_MARGIN
+    local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
+    local -i _row_pos=$((vmenu_row_pos + _abs_index))
+    fn_biw_set_cursor_pos $_row_pos 0
 
     if((_line_idx > vmenu_idx_last))
     then
@@ -174,10 +167,15 @@ function fn_vmenu_draw_row()
         return
     fi
 
-    fn_menu_draw_indicator $_line_idx
-    local -i _line_offset=$?
-    fn_vmenu_draw_selection $_line_idx $_line_offset
-    fn_vmenu_draw_slider $_line_idx
+    fn_sgr_seq_start
+
+        fn_menu_draw_indicator $_line_idx
+        local -i _ind_width=$?
+        local -i _selection_width=$((vmenu_width - _ind_width - 1))
+        fn_vmenu_draw_selection $_line_idx $_selection_width
+        fn_vmenu_draw_slider $_line_idx
+
+    fn_sgr_seq_flush
 
     # reset colors
     fn_sgr_set $SGR_ATTR_DEFAULT
@@ -206,14 +204,8 @@ function fn_menu_draw_indicator()
     _line_indicator="[${_line_indicator}]"
     ((_line_indicator_size += 2))
 
-    if ((vmenu_idx_active == _line_idx))
-    then
-        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
-    else
-        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
-    fi
-
-    echo -n "${_line_indicator}"
+    fn_theme_set_attr_slider $((vmenu_idx_active == _line_idx))
+    fn_sgr_print "${_line_indicator}"
 
     return $_line_indicator_size
 }
@@ -221,25 +213,14 @@ function fn_menu_draw_indicator()
 function fn_vmenu_draw_selection()
 {
     local -i _line_idx=$1
-    local -i _line_offset=$2
+    local -i _print_width=$2
 
     # get line data from array and add space padding
     local _line_result=" ${vmenu_data_values[$_line_idx]}"
+    fn_csi_pad_string "_line_result" $_print_width
 
-    # pad and trim line
-    local -i _padding_size=$((VMENU_WIDTH - _line_offset))
-    printf -v _line_result "%-${_padding_size}s" "${_line_result}"
-    _line_result="${_line_result:0:${_padding_size}}"
-
-    if ((vmenu_idx_active == _line_idx))
-    then
-        fn_theme_set_bg_attr $TATTR_ACTIVE
-    else
-        fn_theme_set_bg_attr $TATTR_BACKGROUND
-    fi
-
-    # output line
-    echo -n "${_line_result}"
+    fn_theme_set_attr_default $((vmenu_idx_active == _line_idx))
+    fn_sgr_print "${_line_result}"
 }
 
 function fn_vmenu_draw_slider()
@@ -252,7 +233,7 @@ function fn_vmenu_draw_slider()
         # Top charachter
         if ((_line_idx == 0))
         then
-            _last_char=$CSI_CHAR_LINE_TOP
+            _last_char=$CSI_CHAR_LINE_TOP_T
         else
             _last_char='^'
         fi
@@ -261,19 +242,12 @@ function fn_vmenu_draw_slider()
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            _last_char=$CSI_CHAR_LINE_BOTTOM
+            _last_char=$CSI_CHAR_LINE_BOTTOM_T
         else
             _last_char='v'
         fi
     fi
 
-    if ((vmenu_idx_active == _line_idx))
-    then
-        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
-    else
-        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
-    fi
-
-    echo -n "${_last_char}"
+    fn_theme_set_attr_slider $((vmenu_idx_active == _line_idx))
+    fn_sgr_print "${_last_char}"
 }
-
