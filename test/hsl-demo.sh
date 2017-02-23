@@ -62,7 +62,7 @@ function fn_hsl_sat_blocks()
 
             for _hue in {0..35}
             do
-                fn_sgr_hsl_set $sgr_attr_bg $_hue $_sat $_light || exit 1
+                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -107,7 +107,7 @@ function fn_hsl_lum_blocks()
 
             for _hue in {0..35}
             do
-                fn_sgr_hsl_set $sgr_attr_bg $_hue $_sat $_light || exit 1
+                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -147,10 +147,10 @@ function fn_hsl_comp_blocks()
         do
             for _sat in {-5..5}
             do
-                fn_sgr_hsl_set $sgr_attr_bg $_hue $_sat $_light || exit 1
+                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 echo -n " "
             done
-            fn_sgr_set $sgr_attr_default
+            fn_sgr_set $SGR_ATTR_DEFAULT
             fn_print_padding $_margin ' '
         done
         echo

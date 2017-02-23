@@ -6,13 +6,13 @@
 # reserved. See LICENSE.
 ##
 
+# Layout
+declare -ri HMENU_HEIGHT=1
+declare -ri HMENU_ITEM_WIDTH=12
+
 # Indexes
 declare -i hmenu_idx_active=0
 declare -i hmenu_idx_end
-
-# Layout
-declare -ri hmenu_height=1
-declare -i hmenu_item_width=12
 
 # Data
 declare -a hmenu_data_values
@@ -33,15 +33,17 @@ fn_hmenu_actions()
 {
     local _key=$1
     case "$_key" in
-        $csi_key_left)
-            fn_hmenu_action_left || return $biw_act_terminate
+        $CSI_KEY_LEFT)
+            fn_hmenu_action_left
+            return $?
             ;;
-        $csi_key_right)
-            fn_hmenu_action_right || return $biw_act_terminate
+        $CSI_KEY_RIGHT)
+            fn_hmenu_action_right
+            return $?
             ;;
     esac
     
-    return $biw_act_continue
+    return $BIW_ACT_IGNORED
 }
 
 function fn_hmenu_get_current_val()
@@ -54,7 +56,7 @@ function fn_hmenu_action_left()
     if((hmenu_idx_active <= 0))
     then
         # can't move
-        return $biw_act_terminate
+        return $BIW_ACT_IGNORED
     fi
 
     ((hmenu_idx_active -= 1))
@@ -66,7 +68,7 @@ function fn_hmenu_action_left()
     fn_hmenu_draw_item $((hmenu_idx_active + 1))
     fn_hmenu_draw_item $((hmenu_idx_active))
     
-    return $biw_act_continue
+    return $BIW_ACT_HANDLED
 }
 
 function fn_hmenu_action_right()
@@ -74,7 +76,7 @@ function fn_hmenu_action_right()
     if((hmenu_idx_active >= hmenu_idx_end))
     then
         # can't move
-        return $biw_act_terminate
+        return $BIW_ACT_IGNORED
     fi
 
     ((hmenu_idx_active += 1))
@@ -86,7 +88,7 @@ function fn_hmenu_action_right()
     fn_hmenu_draw_item $((hmenu_idx_active - 1))
     fn_hmenu_draw_item $((hmenu_idx_active))
     
-    return $biw_act_continue
+    return $BIW_ACT_HANDLED
 }
 
 function fn_hmenu_redraw()
@@ -110,22 +112,22 @@ function fn_hmenu_draw_item()
     local -i _item_idx=$1
     local _item_value=${hmenu_data_values[_item_idx]}
 
-    local -i _adj_menu_width=$((hmenu_item_width - 2))
+    local -i _adj_menu_width=$((HMENU_ITEM_WIDTH - 2))
     printf -v _item_value "%-${_adj_menu_width}s" $_item_value
 
     if ((_item_idx == hmenu_idx_active))
     then
         _item_value="[${_item_value}]"
-        fn_theme_set_bg_attr $theme_attr_active
+        fn_theme_set_bg_attr $TATTR_ACTIVE
     else
         _item_value=" ${_item_value} "
-        fn_theme_set_bg_attr $theme_attr_background
+        fn_theme_set_bg_attr $TATTR_BACKGROUND
     fi
 
-    fn_csi_op $csi_op_col_pos $((biw_margin + _item_idx*hmenu_item_width))
-    fn_sgr_set $sgr_attr_underline
+    fn_csi_op $CSI_OP_COL_POS $((BIW_MARGIN + _item_idx*HMENU_ITEM_WIDTH))
+    fn_sgr_set $SGR_ATTR_UNDERLINE
     echo -n "$_item_value"
 
     # reset colors
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
 }

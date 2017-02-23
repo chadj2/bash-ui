@@ -7,24 +7,24 @@
 ##
 
 # These are added to a color code to make an SGR code
-readonly sgr_attr_default=0
-readonly sgr_attr_bold=1
-readonly sgr_attr_underline=4
-readonly sgr_attr_invert=7
-readonly sgr_attr_fg=30
-readonly sgr_attr_bg=40
-readonly sgr_attr_bright=60
+readonly SGR_ATTR_DEFAULT=0
+readonly SGR_ATTR_BOLD=1
+readonly SGR_ATTR_UNDERLINE=4
+readonly SGR_ATTR_INVERT=7
+readonly SGR_ATTR_FG=30
+readonly SGR_ATTR_BG=40
+readonly SGR_ATTR_BRIGHT=60
 
 # color codes
-readonly sgr_color_black=0
-readonly sgr_color_red=1
-readonly sgr_color_green=2
-readonly sgr_color_yellow=3
-readonly sgr_color_blue=4
-readonly sgr_color_magenta=5
-readonly sgr_color_cyan=6
-readonly sgr_color_white=7
-readonly sgr_color_default=9
+readonly SGR_COL_BLACK=0
+readonly SGR_COL_RED=1
+readonly SGR_COL_GREEN=2
+readonly SGR_COL_YELLOW=3
+readonly SGR_COL_BLUE=4
+readonly SGR_COL_MAGENTA=5
+readonly SGR_COL_CYAN=6
+readonly SGR_COL_WHITE=7
+readonly SGR_COL_DEFAULT=9
 
 # used for buffering of SGR commands
 declare -i sgr_buffer_active=0
@@ -32,7 +32,7 @@ declare -a sgr_buffer_data
 
 # lookup table for HSV-RGB transformations
 declare -a sgr_hsl_table
-declare -i sgr_hsl_table_size=$((6 * 6 * 36))
+declare -ri SGR_HSL_TABLE_SIZE=$((6 * 6 * 36))
 
 # Optionally save output to an array buffer.
 function fn_sgr_print()
@@ -67,7 +67,7 @@ function fn_sgr_seq_start()
 function fn_sgr_seq_flush()
 {
     # add color reset to the end of the buffer
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     
     if((sgr_buffer_active == 0))
     then
@@ -85,7 +85,7 @@ function fn_sgr_seq_flush()
 
 # Send 216 color SGR code.
 # Parameters)
-#   1) Mode [sgr_attr_fg|sgr_attr_bg]
+#   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
 #   2) SGR color code
 function fn_sgr_color216_set()
 {
@@ -97,7 +97,7 @@ function fn_sgr_color216_set()
 
 # Simple color space (8x2)
 # Parameters)
-#   1) Mode [sgr_attr_fg|sgr_attr_bg]
+#   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
 #   1) Color [0-7]
 #   2) Light [0-1]: luminosity
 function fn_sgr_color16_set()
@@ -106,14 +106,14 @@ function fn_sgr_color16_set()
     local -i _color=$2
     local -i _light=$3
 
-    local -i _sgr_light=$((_light ? sgr_attr_bright : 0))
+    local -i _sgr_light=$((_light ? SGR_ATTR_BRIGHT : 0))
     local -i _sgr_code=$((_color + _sgr_mode + _sgr_light))
     fn_sgr_set $_sgr_code
 }
 
 # Greyscale color space (26)
 # Parameters)
-#   1) Mode [sgr_attr_fg|sgr_attr_bg]
+#   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
 #   2) Light [0-25]: luminosity
 function fn_sgr_grey26_set()
 {
@@ -150,7 +150,7 @@ function fn_sgr_color216_get()
 
 # RGB color space (6x6x6).
 # Params:
-#   1) Mode [sgr_attr_fg|sgr_attr_bg]
+#   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
 #   2) Red [0-5]
 #   3) Green [0-5]
 #   4) Blue [0-5]
@@ -246,7 +246,7 @@ function fn_sgr_hsl_calc()
 # Compute HSV table of 6*6*36=1296 values. 
 function fn_sgr_hsl_init()
 {
-    sgr_hsl_table[sgr_hsl_table_size - 1]=0
+    sgr_hsl_table[SGR_HSL_TABLE_SIZE - 1]=0
 
     local -i _hue _sat _light
     local -i _sgr_code
@@ -270,7 +270,7 @@ function fn_sgr_hsl_init()
 
 # HSL color space (36x6x6).
 # Params:
-#   1) Mode [sgr_attr_fg|sgr_attr_bg]
+#   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
 #   2) Hue [0..35]: Angular indicator of color. This parameter is cyclic 
 #          where 0 and 36 are equivalent.
 #   3) Saturation [-5..5]: Indicates amount of color. Negative values will 
@@ -305,7 +305,7 @@ function fn_sgr_hsl_set()
 
     # get value from lookup table
     local -i _lut_size=${#sgr_hsl_table[*]}
-    if((_lut_size != sgr_hsl_table_size))
+    if((_lut_size != SGR_HSL_TABLE_SIZE))
     then
         echo "Error: HSV table not initialized."
         return 1

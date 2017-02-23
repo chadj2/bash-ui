@@ -7,33 +7,33 @@
 ##
 
 # CSI op codes used with fn_csi_op
-readonly csi_op_scroll_up='S'
-readonly csi_op_scroll_down='T'
-readonly csi_op_row_insert='L'
-readonly csi_op_row_delete='M'
-readonly csi_op_row_up='A'
-readonly csi_op_row_down='B'
-readonly csi_op_row_erase='K'
-readonly csi_op_col_pos='G'
-readonly csi_op_cursor_hide='?25l'
-readonly csi_op_cursor_show='?25h'
-readonly csi_op_cursor_save='?1048h'
-readonly csi_op_cursor_restore='?1048l'
+readonly CSI_OP_SCROLL_UP='S'
+readonly CSI_OP_SCROLL_DOWN='T'
+readonly CSI_OP_ROW_INSERT='L'
+readonly CSI_OP_ROW_DELETE='M'
+readonly CSI_OP_ROW_UP='A'
+readonly CSI_OP_ROW_DOWN='B'
+readonly CSI_OP_ROW_ERASE='K'
+readonly CSI_OP_COL_POS='G'
+readonly CSI_OP_CURSOR_HIDE='?25l'
+readonly CSI_OP_CURSOR_SHOW='?25h'
+readonly CSI_OP_CURSOR_SAVE='?1048h'
+readonly CSI_OP_CURSOR_RESTORE='?1048l'
 
 # key codes returned by fn_csi_read_key
-readonly csi_key_up='[A'
-readonly csi_key_down='[B'
-readonly csi_key_left='[D'
-readonly csi_key_right='[C'
-readonly csi_key_eol='eol'
+readonly CSI_KEY_UP='[A'
+readonly CSI_KEY_DOWN='[B'
+readonly CSI_KEY_LEFT='[D'
+readonly CSI_KEY_RIGHT='[C'
+readonly CSI_KEY_EOL='eol'
 
 # Codes to print from the DEC graphics charset
-readonly csi_char_line_vert=$'\e(0\x78\e(B'
-readonly csi_char_line_top=$'\e(0\x77\e(B'
-readonly csi_char_line_bottom=$'\e(0\x76\e(B'
-readonly csi_char_block=$'\e(0\x61\e(B'
-readonly csi_char_bullet=$'\e(0\x7e\e(B'
-readonly csi_char_diamond=$'\e(0\x60\e(B'
+readonly CSI_CHAR_LINE_VERT=$'\e(0\x78\e(B'
+readonly CSI_CHAR_LINE_TOP=$'\e(0\x77\e(B'
+readonly CSI_CHAR_LINE_BOTTOM=$'\e(0\x76\e(B'
+readonly CSI_CHAR_BLOCK=$'\e(0\x61\e(B'
+readonly CSI_CHAR_BULLET=$'\e(0\x7e\e(B'
+readonly CSI_CHAR_DIAMOND=$'\e(0\x60\e(B'
 
 # Executre a CSI termial command
 function fn_csi_op()
@@ -51,14 +51,14 @@ function fn_csi_op()
 function fn_csi_read_key()
 {
     local -r _result_var=$1
-    local -r _read_delay=0.1
+    local -r _read_delay=0.05
 
     # read character
     local _read_result
     read -s -N1 _read_result
 
     # default to empty of not set
-    _read_result=${_read_result:-${csi_key_eol}}
+    _read_result=${_read_result:-${CSI_KEY_EOL}}
 
     # check for escape char
     if [[ $_read_result == $'\e' ]]

@@ -7,72 +7,75 @@
 ##
 
 # create pseudo colors for attributes that we will remap later
-readonly theme_sgr_base=10
-readonly theme_sgr_attr_bold=$((theme_sgr_base + sgr_attr_bold))
-readonly theme_sgr_attr_underline=$((theme_sgr_base + sgr_attr_underline))
-readonly theme_sgr_attr_invert=$((theme_sgr_base + sgr_attr_invert))
+declare -ri TATTR_SGR_BASE=10
+declare -ri TATTR_SGR_BOLD=$((TATTR_SGR_BASE + SGR_ATTR_BOLD))
+declare -ri TATTR_SGR_UNDERLINE=$((TATTR_SGR_BASE + SGR_ATTR_UNDERLINE))
+declare -ri TATTR_SGR_INVERT=$((TATTR_SGR_BASE + SGR_ATTR_INVERT))
 
 # Theme option names
-declare -ri theme_attr_name=0
-declare -ri theme_attr_foreground=1
-declare -ri theme_attr_background=2
-declare -ri theme_attr_active=3
-declare -ri theme_attr_sl_inactive=4
-declare -ri theme_attr_sl_active=5
+declare -ri TATTR_NAME=0
+declare -ri TATTR_FOREGROUND=1
+declare -ri TATTR_BACKGROUND=2
+declare -ri TATTR_ACTIVE=3
+declare -ri TATTR_SL_INACTIVE=4
+declare -ri TATTR_SL_ACTIVE=5
 
-declare -ra theme_type_bright=(
-    [$theme_attr_name]="Bright"
-    [$theme_attr_foreground]=$sgr_color_black
-    [$theme_attr_background]=$((sgr_color_blue + sgr_attr_bright))
-    [$theme_attr_active]=$((sgr_color_red + sgr_attr_bright))
-    [$theme_attr_sl_inactive]=$((sgr_color_cyan + sgr_attr_bright))
-    [$theme_attr_sl_active]=$((sgr_color_yellow + sgr_attr_bright))
+declare -ra THEME_TYPE_BRIGHT=(
+    [$TATTR_NAME]="Bright"
+    [$TATTR_FOREGROUND]=$SGR_COL_BLACK
+    [$TATTR_BACKGROUND]=$((SGR_COL_BLUE + SGR_ATTR_BRIGHT))
+    [$TATTR_ACTIVE]=$((SGR_COL_RED + SGR_ATTR_BRIGHT))
+    [$TATTR_SL_INACTIVE]=$((SGR_COL_CYAN + SGR_ATTR_BRIGHT))
+    [$TATTR_SL_ACTIVE]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
 )
 
-declare -ra theme_type_dark=(
-    [$theme_attr_name]="Dark"
-    [$theme_attr_foreground]=$((sgr_color_white + sgr_attr_bright))
-    [$theme_attr_background]=$sgr_color_black
-    [$theme_attr_active]=$sgr_color_red
-    [$theme_attr_sl_inactive]=$sgr_color_black
-    [$theme_attr_sl_active]=$theme_sgr_attr_invert
+declare -ra THEME_TYPE_DARK=(
+    [$TATTR_NAME]="Dark"
+    [$TATTR_FOREGROUND]=$((SGR_COL_WHITE + SGR_ATTR_BRIGHT))
+    [$TATTR_BACKGROUND]=$SGR_COL_BLACK
+    [$TATTR_ACTIVE]=$SGR_COL_RED
+    [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
+    [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
-declare -ra theme_type_mono=(
-    [$theme_attr_name]="Monochrome"
-    [$theme_attr_foreground]=$sgr_color_default
-    [$theme_attr_background]=$sgr_color_default
-    [$theme_attr_active]=$theme_sgr_attr_invert
-    [$theme_attr_sl_inactive]=$theme_sgr_attr_invert
-    [$theme_attr_sl_active]=$sgr_color_default
+declare -ra THEME_TYPE_MONO=(
+    [$TATTR_NAME]="Monochrome"
+    [$TATTR_FOREGROUND]=$SGR_COL_DEFAULT
+    [$TATTR_BACKGROUND]=$SGR_COL_DEFAULT
+    [$TATTR_ACTIVE]=$TATTR_SGR_INVERT
+    [$TATTR_SL_INACTIVE]=$TATTR_SGR_INVERT
+    [$TATTR_SL_ACTIVE]=$SGR_COL_DEFAULT
 )
 
-declare -ra theme_type_matrix=(
-    [$theme_attr_name]="Matrix"
-    [$theme_attr_foreground]=$(($sgr_color_green + sgr_attr_bright))
-    [$theme_attr_background]=$sgr_color_black
-    [$theme_attr_active]=$theme_sgr_attr_invert
-    [$theme_attr_sl_inactive]=$sgr_color_black
-    [$theme_attr_sl_active]=$theme_sgr_attr_invert
+declare -ra THEME_TYPE_MATRIX=(
+    [$TATTR_NAME]="Matrix"
+    [$TATTR_FOREGROUND]=$(($SGR_COL_GREEN + SGR_ATTR_BRIGHT))
+    [$TATTR_BACKGROUND]=$SGR_COL_BLACK
+    [$TATTR_ACTIVE]=$TATTR_SGR_INVERT
+    [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
+    [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
-declare -ra theme_type_impact=(
-    [$theme_attr_name]="Impact"
-    [$theme_attr_foreground]=$((sgr_color_yellow + sgr_attr_bright))
-    [$theme_attr_background]=$((sgr_color_black + sgr_attr_bright))
-    [$theme_attr_active]=$((sgr_color_blue))
-    [$theme_attr_sl_inactive]=$((sgr_color_red))
-    [$theme_attr_sl_active]=$theme_sgr_attr_invert
+declare -ra THEME_TYPE_IMPACT=(
+    [$TATTR_NAME]="Impact"
+    [$TATTR_FOREGROUND]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
+    [$TATTR_BACKGROUND]=$((SGR_COL_BLACK + SGR_ATTR_BRIGHT))
+    [$TATTR_ACTIVE]=$((SGR_COL_BLUE))
+    [$TATTR_SL_INACTIVE]=$((SGR_COL_RED))
+    [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
 # make a list of all the themes
-declare -ra theme_list=(
-    theme_type_bright
-    theme_type_dark
-    theme_type_mono
-    theme_type_matrix
-    theme_type_impact
+declare -ra THEME_LIST=(
+    THEME_TYPE_BRIGHT
+    THEME_TYPE_DARK
+    THEME_TYPE_MONO
+    THEME_TYPE_MATRIX
+    THEME_TYPE_IMPACT
 )
+
+# file for persisting theme
+declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
 
 # initialize the default theme
 declare -a theme_active
@@ -81,9 +84,6 @@ declare -i theme_active_idx=-1
 # indicates the loaded or last saved theme
 declare -i theme_saved_idx=-1
 
-# file for persisting theme
-declare -r biw_settings_file=$HOME/.biw_settings
-
 # reference of theme names
 declare -a theme_name_list
 
@@ -91,14 +91,14 @@ fn_theme_init()
 {
     fn_theme_set_name_list
 
-    if [ ! -r $biw_settings_file ]
+    if [ ! -r $BIW_SETTINGS_FILE ]
     then
         # nothing to load
         fn_theme_set_idx_active -1
         return
     fi
 
-    local _saved_name=$(cat $biw_settings_file)
+    local _saved_name=$(cat $BIW_SETTINGS_FILE)
 
     fn_theme_idx_from_name $_saved_name
     theme_saved_idx=$?
@@ -121,7 +121,7 @@ function fn_theme_set_idx_active()
         return
     fi
 
-    local _selected_theme=${theme_list[$_selected_idx]}
+    local _selected_theme=${THEME_LIST[$_selected_idx]}
     local _theme_ref="${_selected_theme}[*]"
     theme_active=( ${!_theme_ref} )
 
@@ -131,8 +131,8 @@ function fn_theme_set_idx_active()
 fn_theme_save()
 {
     theme_saved_idx=$theme_active_idx
-    local _saved_theme=${theme_list[$theme_saved_idx]}
-    echo ${_saved_theme} > $biw_settings_file
+    local _saved_theme=${THEME_LIST[$theme_saved_idx]}
+    echo ${_saved_theme} > $BIW_SETTINGS_FILE
 }
 
 fn_theme_idx_from_name()
@@ -140,15 +140,16 @@ fn_theme_idx_from_name()
     local -r _theme_name=$1
     local -i _theme_idx
 
-    for _theme_idx in ${!theme_list[@]}
+    for _theme_idx in ${!THEME_LIST[@]}
     do
-        if [ ${theme_list[$_theme_idx]} == $_theme_name ]
+        if [ ${THEME_LIST[$_theme_idx]} == $_theme_name ]
         then
             return $_theme_idx
         fi
     done
 
-    return -1
+    echo "ERROR Theme not identified: $_theme_name"
+    exit 1
 }
 
 function fn_theme_set_name_list()
@@ -159,9 +160,9 @@ function fn_theme_set_name_list()
 
     theme_name_list=()
 
-    for _theme_type in "${theme_list[@]}"
+    for _theme_type in "${THEME_LIST[@]}"
     do
-        _theme_idx=${_theme_type}[$theme_attr_name]
+        _theme_idx=${_theme_type}[$TATTR_NAME]
         _theme_name=${!_theme_idx}
         theme_name_list+=( $_theme_name )
     done
@@ -170,22 +171,22 @@ function fn_theme_set_name_list()
 function fn_theme_set_bg_attr()
 {
     local -i _bg_attr_name=$1
-    local -i _sgr_modifier=$sgr_attr_default
+    local -i _sgr_modifier=$SGR_ATTR_DEFAULT
     
-    fn_theme_get_sgr $sgr_attr_bg $_bg_attr_name
+    fn_theme_get_sgr $SGR_ATTR_BG $_bg_attr_name
     local -i _sgr_bg_color=$?
 
-    if ((_sgr_bg_color < theme_sgr_base))
+    if ((_sgr_bg_color < TATTR_SGR_BASE))
     then
         # this is a modifier and not a color
         _sgr_modifier=$_sgr_bg_color
 
         # use the default background color
-        fn_theme_get_sgr $sgr_attr_bg $theme_attr_background
+        fn_theme_get_sgr $SGR_ATTR_BG $TATTR_BACKGROUND
         _sgr_bg_color=$?
     fi
 
-    fn_theme_get_sgr $sgr_attr_fg $theme_attr_foreground
+    fn_theme_get_sgr $SGR_ATTR_FG $TATTR_FOREGROUND
     local -i _sgr_fg_color=$?
 
     # send triplet command
@@ -199,10 +200,10 @@ function fn_theme_get_sgr()
     local -i _attr_val=${theme_active[$_attr_name]}
     local -i _sgr_code_result
 
-    if ((_attr_val >= theme_sgr_base && _attr_val < sgr_attr_bright))
+    if ((_attr_val >= TATTR_SGR_BASE && _attr_val < SGR_ATTR_BRIGHT))
     then
         # This is an attribute and not a color
-        _sgr_code_result=$((_attr_val - theme_sgr_base))
+        _sgr_code_result=$((_attr_val - TATTR_SGR_BASE))
     else
         # regular SGR color
         _sgr_code_result=$((_attr_val + _sgr_type))

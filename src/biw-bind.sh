@@ -76,4 +76,4 @@ function fn_biw_set_env()
 fn_biw_init
 
 # set bind key here
-fn_choose_bind $csi_key_down
+fn_choose_bind $CSI_KEY_DOWN

@@ -6,23 +6,25 @@
 # reserved. See LICENSE.
 ##
 
+# Layout
+declare -ri VMENU_WIDTH=50
+
+# placeholder for empty data set
+declare -r VMENU_EMPTY_TEXT="<empty>"
+
 # Data indexes
 declare -i vmenu_idx_active
 declare -i vmenu_idx_last
 declare -a vmenu_data_values
+
+# panel layout
+declare -i vmenu_height
 
 # indexes at the top and bottom of panel
 declare -i vmenu_idx_panel_top
 
 # last index in panel that has data
 declare -i vmenu_idx_panel_end
-
-# Layout
-declare -ri vmenu_width=50
-declare -ri vmenu_height=8
-
-# placeholder for empty data set
-declare -r vmenu_empty_text="<empty>"
 
 # if non-zero then an indicator will show a row as being "checked".
 declare -i vmenu_idx_checked=-1
@@ -32,8 +34,10 @@ declare -i vmenu_idx_redraws=0
 
 function fn_vmenu_init()
 {
+    vmenu_height=$((BIW_PANEL_HEIGHT - HMENU_HEIGHT))
+
     # get refrence to array with menu entries
-    vmenu_data_values=( "${!1-$vmenu_empty_text}" )
+    vmenu_data_values=( "${!1-$VMENU_EMPTY_TEXT}" )
     local -i vmenu_data_size=${#vmenu_data_values[*]}
     vmenu_idx_last=$((vmenu_data_size - 1))
 
@@ -56,15 +60,17 @@ fn_vmenu_actions()
     local _key=$1
 
     case "$_key" in
-        $csi_key_up)
-            fn_vmenu_action_up || return $biw_act_terminate
+        $CSI_KEY_UP)
+            fn_vmenu_action_up
+            return $?
             ;;
-        $csi_key_down)
-            fn_vmenu_action_down || return $biw_act_terminate
+        $CSI_KEY_DOWN)
+            fn_vmenu_action_down
+            return $?
             ;;
     esac
 
-    return $biw_act_continue
+    return $BIW_ACT_IGNORED
 }
 
 function fn_vmenu_get_current_val()
@@ -77,7 +83,7 @@ function fn_vmenu_action_down()
     if ((vmenu_idx_active >= vmenu_idx_last))
     then
         # we are at the end of the data so we can't move
-        return $biw_act_terminate
+        return $BIW_ACT_IGNORED
     fi
 
     # move active index
@@ -94,7 +100,7 @@ function fn_vmenu_action_down()
         fn_vmenu_draw_row $vmenu_idx_active
     fi
 
-    return $biw_act_continue
+    return $BIW_ACT_HANDLED
 }
 
 function fn_vmenu_action_up()
@@ -102,7 +108,7 @@ function fn_vmenu_action_up()
     if ((vmenu_idx_active <= 0))
     then
         # we are at the start of the data so we can't move
-        return $biw_act_terminate
+        return $BIW_ACT_IGNORED
     fi
 
     ((vmenu_idx_active -= 1))
@@ -118,7 +124,7 @@ function fn_vmenu_action_up()
         fn_vmenu_draw_row $vmenu_idx_active
     fi
 
-    return $biw_act_continue
+    return $BIW_ACT_HANDLED
 }
 
 function fn_vmenu_redraw()
@@ -148,9 +154,9 @@ function fn_vmenu_redraw()
 function fn_move_cursor()
 {
     local -i _line_idx=$1
-    fn_csi_op $csi_op_cursor_restore
+    fn_csi_op $CSI_OP_CURSOR_RESTORE
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
-    fn_csi_op $csi_op_row_up $((vmenu_height - _abs_index))
+    fn_csi_op $CSI_OP_ROW_UP $((vmenu_height - _abs_index))
 }
 
 function fn_vmenu_draw_row()
@@ -159,12 +165,12 @@ function fn_vmenu_draw_row()
 
     # position cursor
     fn_move_cursor $_line_idx
-    fn_csi_op $csi_op_col_pos $biw_margin
+    fn_csi_op $CSI_OP_COL_POS $BIW_MARGIN
 
     if((_line_idx > vmenu_idx_last))
     then
         # no data to draw so erase row
-        fn_csi_op $csi_op_row_erase
+        fn_csi_op $CSI_OP_ROW_ERASE
         return
     fi
 
@@ -174,7 +180,7 @@ function fn_vmenu_draw_row()
     fn_vmenu_draw_slider $_line_idx
 
     # reset colors
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
 }
 
 function fn_menu_draw_indicator()
@@ -190,7 +196,7 @@ function fn_menu_draw_indicator()
 
         if((_line_idx == vmenu_idx_checked))
         then
-            _line_indicator=$csi_char_diamond
+            _line_indicator=$CSI_CHAR_DIAMOND
         fi
     else
         _line_indicator=$_line_idx
@@ -202,9 +208,9 @@ function fn_menu_draw_indicator()
 
     if ((vmenu_idx_active == _line_idx))
     then
-        fn_theme_set_bg_attr $theme_attr_sl_active
+        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
     else
-        fn_theme_set_bg_attr $theme_attr_sl_inactive
+        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
     fi
 
     echo -n "${_line_indicator}"
@@ -221,15 +227,15 @@ function fn_vmenu_draw_selection()
     local _line_result=" ${vmenu_data_values[$_line_idx]}"
 
     # pad and trim line
-    local -i _padding_size=$((vmenu_width - _line_offset))
+    local -i _padding_size=$((VMENU_WIDTH - _line_offset))
     printf -v _line_result "%-${_padding_size}s" "${_line_result}"
     _line_result="${_line_result:0:${_padding_size}}"
 
     if ((vmenu_idx_active == _line_idx))
     then
-        fn_theme_set_bg_attr $theme_attr_active
+        fn_theme_set_bg_attr $TATTR_ACTIVE
     else
-        fn_theme_set_bg_attr $theme_attr_background
+        fn_theme_set_bg_attr $TATTR_BACKGROUND
     fi
 
     # output line
@@ -239,14 +245,14 @@ function fn_vmenu_draw_selection()
 function fn_vmenu_draw_slider()
 {
     local -i _line_idx=$1
-    local _last_char=$csi_char_line_vert
+    local _last_char=$CSI_CHAR_LINE_VERT
 
     if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
         then
-            _last_char=$csi_char_line_top
+            _last_char=$CSI_CHAR_LINE_TOP
         else
             _last_char='^'
         fi
@@ -255,7 +261,7 @@ function fn_vmenu_draw_slider()
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            _last_char=$csi_char_line_bottom
+            _last_char=$CSI_CHAR_LINE_BOTTOM
         else
             _last_char='v'
         fi
@@ -263,9 +269,9 @@ function fn_vmenu_draw_slider()
 
     if ((vmenu_idx_active == _line_idx))
     then
-        fn_theme_set_bg_attr $theme_attr_sl_active
+        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
     else
-        fn_theme_set_bg_attr $theme_attr_sl_inactive
+        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
     fi
 
     echo -n "${_last_char}"

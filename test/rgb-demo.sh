@@ -21,10 +21,10 @@ function fn_rgb16_demo()
     do
         for _color in {0..7}
         do
-            fn_sgr_color16_set $sgr_attr_bg $_color $_light || exit 1
+            fn_sgr_color16_set $SGR_ATTR_BG $_color $_light || exit 1
             echo -n " "
         done
-        fn_sgr_set $sgr_attr_default
+        fn_sgr_set $SGR_ATTR_DEFAULT
         echo
     done
     echo
@@ -38,11 +38,11 @@ function fn_grey26_demo()
 
     for _light in {0..25}
     do
-        fn_sgr_grey26_set $sgr_attr_bg $_light || exit 1
+        fn_sgr_grey26_set $SGR_ATTR_BG $_light || exit 1
         echo -n " "
     done
 
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     echo
     echo
 }
@@ -53,34 +53,34 @@ function fn_rgb216_grad_demo()
 
     for _red in {0..5}
     do
-        fn_sgr_rgb216_set $sgr_attr_bg $_red 0 0 || exit 1
+        fn_sgr_rgb216_set $SGR_ATTR_BG $_red 0 0 || exit 1
         echo -n " "
     done
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     echo
 
     for _green in {0..5}
     do
-        fn_sgr_rgb216_set $sgr_attr_bg 0 $_green 0 || exit 1
+        fn_sgr_rgb216_set $SGR_ATTR_BG 0 $_green 0 || exit 1
         echo -n " "
     done
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     echo
 
     for _blue in {0..5}
     do
-        fn_sgr_rgb216_set $sgr_attr_bg 0 0 $_blue || exit 1
+        fn_sgr_rgb216_set $SGR_ATTR_BG 0 0 $_blue || exit 1
         echo -n " "
     done
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     echo
 
     for _grey in {0..5}
     do
-        fn_sgr_rgb216_set $sgr_attr_bg $_grey $_grey $_grey || exit 1
+        fn_sgr_rgb216_set $SGR_ATTR_BG $_grey $_grey $_grey || exit 1
         echo -n " "
     done
-    fn_sgr_set $sgr_attr_default
+    fn_sgr_set $SGR_ATTR_DEFAULT
     echo
 
     echo
@@ -97,11 +97,11 @@ function fn_rgb216_grid_demo()
         do
             for _blue in {0..5}
             do
-                fn_sgr_rgb216_set $sgr_attr_bg $_red $_green $_blue || exit 1
+                fn_sgr_rgb216_set $SGR_ATTR_BG $_red $_green $_blue || exit 1
                 echo -n " "
             done
         done
-        fn_sgr_set $sgr_attr_default
+        fn_sgr_set $SGR_ATTR_DEFAULT
         echo
     done
     echo
