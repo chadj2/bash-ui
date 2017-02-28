@@ -177,7 +177,9 @@ function fn_theme_set_attr_default()
     local -i _is_active=$1
     if ((_is_active == 0))
     then
+        #set -x
         fn_theme_set_attr $TATTR_BG_INACTIVE
+        #exit
     else
         fn_theme_set_attr $TATTR_BG_ACTIVE
     fi
@@ -197,46 +199,61 @@ function fn_theme_set_attr_slider()
 function fn_theme_set_attr()
 {
     local -i _bg_attr_name=$1
-    local -i _sgr_attr=$SGR_ATTR_DEFAULT
-    
-    fn_theme_get_sgr $SGR_ATTR_BG $_bg_attr_name
-    local -i _sgr_bg_color=$?
 
-    if ((_sgr_bg_color < TATTR_SGR_BASE))
+    local -i _bg_sgr_nested=$((!sgr_buffer_active))
+
+    if((_bg_sgr_nested))
     then
-        # this is a attribute and not a color
-        _sgr_attr=$_sgr_bg_color
-
-        # use the default background color
-        fn_theme_get_sgr $SGR_ATTR_BG $TATTR_BG_INACTIVE
-        _sgr_bg_color=$?
+        fn_sgr_seq_start
     fi
 
-    fn_theme_get_sgr $SGR_ATTR_FG $TATTR_TEXT
-    local -i _sgr_fg_color=$?
+    fn_sgr_set $SGR_ATTR_DEFAULT
 
-    # send triplet command
-    fn_sgr_set "${_sgr_attr};${_sgr_fg_color};${_sgr_bg_color}"
+    fn_theme_set_color $SGR_ATTR_BG $_bg_attr_name
+    local -i _sgr_attr_bg=$?
+
+    if((_sgr_attr_bg))
+    then
+        # this is a attribute and not a color so set the background
+        fn_theme_set_color $SGR_ATTR_BG $TATTR_BG_INACTIVE
+        fn_sgr_set $_sgr_attr_bg
+    fi
+
+    fn_theme_set_color $SGR_ATTR_FG $TATTR_TEXT
+    local -i _sgr_attr_fg=$?
+
+    if((_sgr_attr_fg))
+    then
+        if((_sgr_attr_fg))
+        then
+            echo "ERROR: _sgr_attr_fg and _sgr_attr_bg can't both be set."
+        fi
+        fn_sgr_set $_sgr_attr_fg
+    fi
+
+    if((_bg_sgr_nested))
+    then
+        fn_sgr_seq_flush
+    fi
 }
 
-function fn_theme_get_sgr()
+function fn_theme_set_color()
 {
-    local -i _sgr_type=$1
-    local -i _attr_name=$2
+    local -i _sgr_mode=$1
+    local -i _theme_attr_name=$2
 
-    local -i _attr_val=${theme_active[$_attr_name]}
-    local -i _sgr_code_result
+    local -i _theme_attr_val=${theme_active[$_theme_attr_name]}
 
-    if ((_attr_val >= TATTR_SGR_BASE && _attr_val < SGR_ATTR_BRIGHT))
+    if ((_theme_attr_val >= TATTR_SGR_BASE && _theme_attr_val < SGR_ATTR_BRIGHT))
     then
-        # This is an attribute and not a color
-        _sgr_code_result=$((_attr_val - TATTR_SGR_BASE))
-    else
-        # regular SGR color
-        _sgr_code_result=$((_attr_val + _sgr_type))
+        # This is an attribute and not a color so return the attribute
+        local -i _sgr_attr=$((_theme_attr_val - TATTR_SGR_BASE))
+        return $_sgr_attr
     fi
 
-    return $_sgr_code_result
+    fn_sgr_color16_set $_sgr_mode $_theme_attr_val
+
+    return 0
 }
 
 # always init theme
