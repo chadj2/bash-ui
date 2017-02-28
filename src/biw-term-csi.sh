@@ -30,7 +30,11 @@ readonly CSI_KEY_UP='[A'
 readonly CSI_KEY_DOWN='[B'
 readonly CSI_KEY_LEFT='[D'
 readonly CSI_KEY_RIGHT='[C'
-readonly CSI_KEY_EOL='eol'
+readonly CSI_KEY_PG_UP='[5~'
+readonly CSI_KEY_PG_DOWN='[6~'
+readonly CSI_KEY_HOME='[H'
+readonly CSI_KEY_END='[F'
+readonly CSI_KEY_EOL='EOL'
 
 # Codes to print from the DEC graphics charset
 readonly CSI_CHAR_LINE_VERT=$'\e(0\x78\e(B'
@@ -61,8 +65,6 @@ function fn_csi_read_key()
     local -r _result_var=$1
     local _timeout=${2:-''}
 
-    local -r _read_delay=0.05
-
     local _timeout_opt=''
     if [ -n "$_timeout" ]
     then
@@ -80,18 +82,34 @@ function fn_csi_read_key()
         return 1
     fi
 
-    # default to empty of not set
+    # default to EOL not set
     _read_result=${_read_result:-${CSI_KEY_EOL}}
 
-    # check for escape char
+    # we add a slight delay to give bytes time to arrive
+    local -r _read_delay=0.05
+
+    # If we have an escape char then we check for a 2 byte 
+    # code like KEY_UP='[A'.
     if [[ $_read_result == $'\e' ]]
     then
         # read the rest of the escape code
         read -t$_read_delay -s -N2 _read_result
     fi
 
+    # If this is a 3 byte code like KEY_PG_DOWN='[6~' then
+    # we need to read the last byte. We assume that if we got 
+    # a digit in the last read then this is a 3 byte code.
+    local _pattern='[[][[:digit:]]'
+    if [[ $_read_result == $_pattern ]]
+    then
+        local _extended_code
+        # read the rest of the escape code
+        read -t$_read_delay -s -N1 _extended_code
+        _read_result="${_read_result}${_extended_code}"
+    fi
+
     # set result
-    eval $_result_var='$_read_result'
+    printf -v $_result_var "$_read_result"
 
     return 0
 }
@@ -99,9 +117,10 @@ function fn_csi_read_key()
 # Wait a short amount of time measured in milliseconds. 
 function fn_csi_milli_wait()
 {
+    local -r _animate_delay=$1
+    
     # we use read insted of sleep because it is a 
     # bash builtin and sleep would be too slow
-    local -r _animate_delay=0.015
     read -s -N0 -t$_animate_delay
 }
 
@@ -111,5 +130,5 @@ function fn_csi_pad_string()
     local -i _pad_width=$2
 
     printf -v $_var_name "%-${_pad_width}s" "${!_var_name}"
-    eval $_var_name='${!_var_name:0:${_pad_width}}'
+    printf -v $_var_name "${!_var_name:0:${_pad_width}}"
 }

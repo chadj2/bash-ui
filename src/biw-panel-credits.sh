@@ -56,6 +56,7 @@ function fn_cred_show()
 
     fn_cred_blank_panel
     fn_cred_load_data
+    fn_biw_debug_print
     
     fn_cred_print_data
 
@@ -128,7 +129,7 @@ function fn_color_map_hsl_hue()
         fn_hsl_get $_hsl_hue $_hsl_sat $_hsl_light
         _sgr_code=$?
 
-        for((_hsl_sat_length = 0; _hsl_sat_length <= 1; _hsl_sat_length++))
+        for((_hsl_sat_length = 0; _hsl_sat_length <= 2; _hsl_sat_length++))
         do
             cred_color_map[_map_idx++]=$_sgr_code
         done
@@ -213,51 +214,65 @@ function fn_cred_print_line()
     # set the cursor in a position that will center the text
     local -i _line_start=$(((cred_canvas_width - _line_width) / 2))
 
+    local _result_char
+    local -i _terminate_loop
+
     # sprite indicators
     local -i _text_active=1
+    local -i _text_idx=0
+
     local -i _alpha_active=1
+
     local -i _cursor_active=0
-
-    local -i _char_idx=0
     local -i _cursor_counter=$CRED_CURSOR_MAX
-    local _result_char
 
-    # start main animation loop
-    while fn_biw_process_key _result_char $CRED_ANIMATE_DELAY
+    # start main animation loop. 
+    # Elements execute asynchronously.
+    while fn_biw_process_key '_result_char' $CRED_ANIMATE_DELAY
     do
-        # activate chars in alpha map
-        if((_text_active))
+        _terminate_loop=1
+
+        # render sprites
+        if((_text_active)); then
+            if ! fn_cred_animate_text; then _text_active=0; fi
+            _terminate_loop=0
+        fi
+
+        if((_alpha_active)); then
+            if ! fn_cred_print_alpha; then  _alpha_active=0; fi
+            _terminate_loop=0
+        fi
+
+        if((_cursor_active)); then
+            if ! fn_cred_animate_cursor; then _cursor_active=0; fi
+            _terminate_loop=0
+        fi
+
+        # apply logic to sprites
+        if((!_cursor_active))
         then
-            if ! fn_cred_animate_text $_char_idx $_line_width
+            # if text ended but counter still has ticks then activate
+            if((!_text_active && _cursor_counter > 0))
             then
-                _text_active=0
                 _cursor_active=1
             fi
-            ((_char_idx++))
-        fi
 
-        # process alpha map
-        if((_alpha_active))
-        then
-            if ! fn_cred_print_alpha "$_line_val" $_line_start
+            # if we are at the end of the last line then 
+            # keep the cursor going
+            if((_persist_cursor && _terminate_loop))
             then
-                _alpha_active=0
+                _cursor_active=1
+            fi
+
+            if((_cursor_active))
+            then
+                _cursor_counter=$CRED_CURSOR_MAX
+                _terminate_loop=0
             fi
         fi
 
-        # process cursor
-        if((_cursor_active))
+        if((_terminate_loop))
         then
-            if ! fn_cred_animate_cursor $((_line_start + _line_width))
-            then
-                _cursor_active=$_persist_cursor
-            fi
-            ((_cursor_counter--))
-        fi
-
-        if((!_alpha_active && !_cursor_active))
-        then
-            # nothing left for fn_cred_print_alpha
             # normal termination
             return 0
         fi
@@ -269,58 +284,20 @@ function fn_cred_print_line()
 
 function fn_cred_animate_text()
 {
-    local -i _char_idx=$1
-    local -i _line_width=$2
-
     # add characters to the alpha map
-    if((_char_idx < _line_width))
+    if((_text_idx >= _line_width))
     then
-        cred_alpha_map[_char_idx]=$((cred_color_map_size - 1))
-    else
         return 1
     fi
-
-    return 0
-}
-
-function fn_cred_animate_cursor()
-{
-    local -i _cursor_pos=$1
-
-    if(( _cursor_counter % (CRED_CURSOR_PERIOD / 2) ))
-    then
-        # nothing to do
-        return 0
-    fi
-
-    fn_biw_set_col_pos $_cursor_pos
-
-    local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
-    fn_cred_set_color $_sgr_color
-
-    if((_cursor_counter <= 0))
-    then
-        # terminate
-        _cursor_counter=$((CRED_CURSOR_MAX + 1))
-        fn_sgr_print " "
-        return 1
-    fi
-
-    local _sgr_char=" "
-    if(( !(_cursor_counter % CRED_CURSOR_PERIOD) ))
-    then
-        _sgr_char="_"
-    fi
-
-    fn_sgr_print "$_sgr_char"
+    
+    cred_alpha_map[_text_idx]=$((cred_color_map_size - 1))
+    ((_text_idx++))
 
     return 0
 }
 
 function fn_cred_print_alpha()
 {
-    local _line_val=$1
-    local -i _line_start=$2
     local -i _line_width=${#_line_val}
 
     local -i _alpha_idx
@@ -377,6 +354,46 @@ function fn_cred_print_alpha()
     return 0
 }
 
+function fn_cred_animate_cursor()
+{
+    local -i _should_show=0
+
+    if((_cursor_counter <= 0))
+    then
+        # hide
+        fn_cred_print_cursor $_should_show
+        return 1
+    fi
+
+    if(( !(_cursor_counter % (CRED_CURSOR_PERIOD / 2)) ))
+    then
+        _should_show=$(( !(_cursor_counter % CRED_CURSOR_PERIOD) ))
+        fn_cred_print_cursor $_should_show
+    fi
+
+    ((_cursor_counter--))
+
+    return 0
+}
+
+function fn_cred_print_cursor()
+{
+    local -i _cursor_pos=$((_line_start + _line_width))
+    local -i _should_show=$1
+
+    fn_biw_set_col_pos $_cursor_pos
+
+    local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
+    fn_cred_set_color $_sgr_color
+
+    local _sgr_char=" "
+    if((_should_show))
+    then
+        _sgr_char="_"
+    fi
+
+    fn_sgr_print "$_sgr_char"
+}
 
 function fn_cred_canvas_set_cursor()
 {
@@ -445,6 +462,5 @@ function fn_cred_repeat_chars()
     local _pad_char=${3:- }
 
     printf -v $_var_name '%*s' $_pad_width
-    local _result_val=${!_var_name// /${_pad_char}}
-    eval $_var_name='$_result_val'
+    printf -v $_var_name "${!_var_name// /${_pad_char}}"
 }

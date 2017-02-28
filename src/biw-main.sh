@@ -22,11 +22,10 @@ source ${BIW_HOME}/biw-panel-hmenu.sh
 source ${BIW_HOME}/biw-panel-credits.sh
 
 declare -r BIW_VERSION=0.9
-declare -ri BIW_ENABLE_DEBUG=0
 
 # global widget params
 declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=10
+declare -ri BIW_PANEL_HEIGHT=12
 declare -ri BIW_PANEL_WIDTH=50
 
 # max values to load for history and file lists
@@ -34,6 +33,8 @@ declare -ri BIW_VALUES_MAX=30
 
 declare -ri BIW_ACT_IGNORED=1
 declare -ri BIW_ACT_HANDLED=0
+
+declare -r BIW_OC_ANIMATE_DELAY=0.015
 
 # Options for HMenu
 declare -r BIW_MENU_HISTORY="History"
@@ -108,7 +109,7 @@ function fn_biw_process_key()
     # don't print debug if we are animating something 
     if [ -z "$_timeout" ]
     then
-        fn_biw_debug_stats
+        fn_biw_debug_print
     fi
 
     fn_csi_read_key $_result_key $_timeout
@@ -267,7 +268,7 @@ function fn_biw_open()
     for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
     do
         fn_csi_op $CSI_OP_SCROLL_UP 1
-        fn_csi_milli_wait
+        fn_csi_milli_wait $BIW_OC_ANIMATE_DELAY
     done
 
     # non-animated open:
@@ -287,7 +288,7 @@ function fn_biw_close()
         fn_csi_op $CSI_OP_ROW_DELETE 1
         fn_csi_op $CSI_OP_SCROLL_DOWN 1
         fn_csi_op $CSI_OP_ROW_DOWN 1
-        fn_csi_milli_wait
+        fn_csi_milli_wait $BIW_OC_ANIMATE_DELAY
     done
 
     # non-animate close:
@@ -296,6 +297,9 @@ function fn_biw_close()
 
     # restore original cursor position
     fn_csi_op $CSI_OP_CURSOR_RESTORE
+
+    # clear out any junk on the line
+    fn_csi_op $CSI_OP_ROW_ERASE
 
     # restore terminal settings
     fn_csi_op $CSI_OP_CURSOR_SHOW
@@ -319,8 +323,8 @@ function fn_biw_panic()
     fn_csi_op $CSI_OP_CURSOR_RESTORE
 
     echo
-    echo "PANIC Failure at: "
-    echo "<${_command}>(${_fail_func}:${_fail_line})"
+    echo "PANIC Failure at (${_fail_func}:${_fail_line}):"
+    echo "=> ${_command}"
     echo
 
     echo "Call stack:"
@@ -332,15 +336,36 @@ function fn_biw_panic()
     exit 1
 }
 
-fn_biw_debug_stats()
+declare -i BIW_DEBUG_ENABLE=0
+declare -i BIW_DEBUG_SEQ=0
+declare BIW_DEBUG_MSG=''
+
+fn_biw_debug_print()
 {
-    if((BIW_ENABLE_DEBUG <= 0))
+    if((BIW_DEBUG_ENABLE <= 0))
     then
         return
     fi
 
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-    echo -n "redraw_h(${hmenu_idx_redraws}) redraw_v(${vmenu_idx_redraws}) "
+    fn_csi_op $CSI_OP_ROW_ERASE
+
+    printf "DEBUG(%s): %s" $BIW_DEBUG_SEQ "$BIW_DEBUG_MSG"
+
+    BIW_DEBUG_MSG=''
+    ((BIW_DEBUG_SEQ++))
+}
+
+fn_biw_debug_msg()
+{
+    if((BIW_DEBUG_ENABLE <= 0))
+    then
+        return
+    fi
+
+    local _pattern="${1:-<no message>}"
+    shift
+    printf -v BIW_DEBUG_MSG "%s: ${_pattern}" ${FUNCNAME[1]} "$@" 
 }
 
 # entry point

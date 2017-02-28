@@ -17,7 +17,7 @@ declare -i vmenu_idx_active
 declare -i vmenu_idx_last
 declare -a vmenu_data_values
 
-# panel layout
+# panel geometry
 declare -i vmenu_height
 declare -i vmenu_width
 declare -i vmenu_row_pos
@@ -36,7 +36,7 @@ declare -i vmenu_idx_redraws=0
 
 function fn_vmenu_init()
 {
-    # Layout
+    # Geometry
     vmenu_height=$((BIW_PANEL_HEIGHT - HMENU_HEIGHT))
     vmenu_width=$BIW_PANEL_WIDTH
     vmenu_row_pos=$HMENU_HEIGHT
@@ -50,14 +50,9 @@ function fn_vmenu_init()
     vmenu_idx_active=${2:-0}
     vmenu_idx_checked=-1
 
-    # if data set fits entirely in the window then there is no need for
-    # scrolling
-    if ((vmenu_data_size < vmenu_height))
-    then
-        vmenu_idx_panel_top=0
-    else
-        vmenu_idx_panel_top=$vmenu_idx_active
-    fi
+    # panel display area defaults to the start of the list. This 
+    # be adjusted by redraw.
+    vmenu_idx_panel_top=0
 }
 
 fn_vmenu_actions()
@@ -73,8 +68,25 @@ fn_vmenu_actions()
             fn_vmenu_action_down
             return $?
             ;;
+        $CSI_KEY_PG_UP)
+            fn_vmenu_action_page_up
+            return $?
+            ;;
+        $CSI_KEY_PG_DOWN)
+            fn_vmenu_action_page_down
+            return $?
+            ;;
+        $CSI_KEY_HOME)
+            fn_vmenu_action_home
+            return $?
+            ;;
+        $CSI_KEY_END)
+            fn_vmenu_action_end
+            return $?
+            ;;
     esac
 
+    fn_biw_debug_msg "BIW_ACT_IGNORED: _key=%s" "$_key"
     return $BIW_ACT_IGNORED
 }
 
@@ -103,6 +115,8 @@ function fn_vmenu_action_down()
         # redraw affected rows
         fn_vmenu_draw_row $((vmenu_idx_active - 1))
         fn_vmenu_draw_row $vmenu_idx_active
+
+        fn_biw_debug_msg "idx=%s" $vmenu_idx_active
     fi
 
     return $BIW_ACT_HANDLED
@@ -127,32 +141,120 @@ function fn_vmenu_action_up()
         # redraw affected rows
         fn_vmenu_draw_row $((vmenu_idx_active + 1))
         fn_vmenu_draw_row $vmenu_idx_active
+
+        fn_biw_debug_msg "idx=%s" $vmenu_idx_active
     fi
+
+    return $BIW_ACT_HANDLED
+}
+
+function fn_vmenu_action_page_down()
+{
+    if ((vmenu_idx_active >= vmenu_idx_last))
+    then
+        # we are at the end of the data so we can't move
+        return $BIW_ACT_IGNORED
+    fi
+
+    ((vmenu_idx_active += vmenu_height))
+
+    if((vmenu_idx_active > vmenu_idx_last))
+    then
+        vmenu_idx_active=$vmenu_idx_last
+    fi
+
+    fn_vmenu_redraw
+
+    return $BIW_ACT_HANDLED
+}
+
+function fn_vmenu_action_page_up()
+{
+    if ((vmenu_idx_active <= 0))
+    then
+        # we are at the end of the data so we can't move
+        return $BIW_ACT_IGNORED
+    fi
+
+    ((vmenu_idx_active -= vmenu_height))
+
+    if((vmenu_idx_active <= 0))
+    then
+        vmenu_idx_active=0
+    fi
+
+    fn_vmenu_redraw
+
+    return $BIW_ACT_HANDLED
+}
+
+function fn_vmenu_action_home()
+{
+    if ((vmenu_idx_active <= 0))
+    then
+        # we are at the end of the data so we can't move
+        return $BIW_ACT_IGNORED
+    fi
+
+    vmenu_idx_active=0
+    fn_vmenu_redraw
+
+    return $BIW_ACT_HANDLED
+}
+
+function fn_vmenu_action_end()
+{
+    if ((vmenu_idx_active >= vmenu_idx_last))
+    then
+        # we are at the end of the data so we can't move
+        return $BIW_ACT_IGNORED
+    fi
+
+    vmenu_idx_active=$vmenu_idx_last
+    fn_vmenu_redraw
 
     return $BIW_ACT_HANDLED
 }
 
 function fn_vmenu_redraw()
 {
-    local -i vmenu_idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_height - 1))
+    # snap window up to the active row
+    if((vmenu_idx_panel_top > vmenu_idx_active))
+    then
+        vmenu_idx_panel_top=$vmenu_idx_active
+    fi
+
+    local -i _idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_height - 1))
+
+    # snap window down to the active row
+    if((_idx_panel_bottom < vmenu_idx_active))
+    then
+        ((vmenu_idx_panel_top += (vmenu_idx_active - _idx_panel_bottom)))
+        _idx_panel_bottom=$vmenu_idx_active
+    fi
 
     # adjust the last index if there are not enough values to display
-    vmenu_idx_panel_end=${vmenu_idx_panel_bottom}
+    vmenu_idx_panel_end=${_idx_panel_bottom}
 
     if((vmenu_idx_panel_end > vmenu_idx_last))
     then
         vmenu_idx_panel_end=$vmenu_idx_last
     fi
+
+    fn_biw_debug_msg 'fn_vmenu_redraw <A=%s T=%s E=%s B=%s>' \
+        $vmenu_idx_active \
+        $vmenu_idx_panel_top \
+        $vmenu_idx_panel_end \
+        $_idx_panel_bottom
     
     # draw all menu items
-    for((_line_idx = vmenu_idx_panel_top; _line_idx <= vmenu_idx_panel_bottom; _line_idx++))
+    for((_line_idx = vmenu_idx_panel_top; _line_idx <= _idx_panel_bottom; _line_idx++))
     do
         fn_vmenu_draw_row $_line_idx
     done
 
     ((vmenu_idx_redraws++))
 }
-
 
 function fn_vmenu_draw_row()
 {
