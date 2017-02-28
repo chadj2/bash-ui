@@ -4,6 +4,9 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-term-csi.sh
+# Description:  Send terminal control CSI sequences to manipulate the cursor.
 ##
 
 # CSI op codes used with fn_csi_op

@@ -9,6 +9,7 @@
 set -o nounset
 
 source ${BIW_HOME}/biw-term-sgr.sh
+source ${BIW_HOME}/biw-term-hsl.sh
 
 function fn_print_padding()
 {
@@ -52,7 +53,7 @@ function fn_hsl_sat_blocks()
     echo
 
     local -i _light
-    for _light in {5..0}
+    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _sat in ${_sat_list[@]}
         do
@@ -60,9 +61,9 @@ function fn_hsl_sat_blocks()
 
             fn_sgr_seq_start
 
-            for _hue in {0..35}
+            for((_hue = 0; _hue < HSL_HUE_SIZE; _hue++))
             do
-                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -98,7 +99,7 @@ function fn_hsl_lum_blocks()
     echo
 
     local -i _light
-    for _sat in {5..0}
+    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _light in ${_lum_list[@]}
         do
@@ -106,9 +107,9 @@ function fn_hsl_lum_blocks()
 
             fn_sgr_seq_start
 
-            for _hue in {0..35}
+            for((_hue = 0; _hue < HSL_HUE_SIZE; _hue++))
             do
-                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -143,13 +144,13 @@ function fn_hsl_comp_blocks()
     echo
 
     local -i _light
-    for _light in {5..0}
+    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _hue in ${_hue_list[@]}
         do
-            for _sat in {-5..5}
+            for((_sat = -1*(HSL_SAT_SIZE - 1); _sat < HSL_SAT_SIZE; _sat++))
             do
-                fn_sgr_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 echo -n " "
             done
             fn_sgr_set $SGR_ATTR_DEFAULT
@@ -166,8 +167,8 @@ function fn_hsl_comp_demo()
     fn_hsl_comp_blocks 9 12 15
 }
 
-echo "Computing HSV Table..."
-fn_sgr_hsl_init
+echo "Computing HSL Table..."
+fn_hsl_init
 
 # display 6 rainbows of variable saturation
 fn_hsl_sat_demo

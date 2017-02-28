@@ -4,9 +4,15 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-theme.sh
+# Description:  Manage SGR attributes based on display themes.
 ##
 
 # create pseudo colors for attributes that we will remap later
+# [0..9]: SGR Colors
+# [10..20]: Attributes
+# [SGR_ATTR_BRIGHT..+10]: Bright SGR Colors
 declare -ri TATTR_SGR_BASE=10
 declare -ri TATTR_SGR_BOLD=$((TATTR_SGR_BASE + SGR_ATTR_BOLD))
 declare -ri TATTR_SGR_UNDERLINE=$((TATTR_SGR_BASE + SGR_ATTR_UNDERLINE))
@@ -171,9 +177,9 @@ function fn_theme_set_attr_default()
     local -i _is_active=$1
     if ((_is_active == 0))
     then
-        fn_theme_set_bg_attr $TATTR_BG_INACTIVE
+        fn_theme_set_attr $TATTR_BG_INACTIVE
     else
-        fn_theme_set_bg_attr $TATTR_BG_ACTIVE
+        fn_theme_set_attr $TATTR_BG_ACTIVE
     fi
 }
 
@@ -182,24 +188,24 @@ function fn_theme_set_attr_slider()
     local -i _is_active=$1
     if ((_is_active == 0))
     then
-        fn_theme_set_bg_attr $TATTR_SL_INACTIVE
+        fn_theme_set_attr $TATTR_SL_INACTIVE
     else
-        fn_theme_set_bg_attr $TATTR_SL_ACTIVE
+        fn_theme_set_attr $TATTR_SL_ACTIVE
     fi
 }
 
-function fn_theme_set_bg_attr()
+function fn_theme_set_attr()
 {
     local -i _bg_attr_name=$1
-    local -i _sgr_modifier=$SGR_ATTR_DEFAULT
+    local -i _sgr_attr=$SGR_ATTR_DEFAULT
     
     fn_theme_get_sgr $SGR_ATTR_BG $_bg_attr_name
     local -i _sgr_bg_color=$?
 
     if ((_sgr_bg_color < TATTR_SGR_BASE))
     then
-        # this is a modifier and not a color
-        _sgr_modifier=$_sgr_bg_color
+        # this is a attribute and not a color
+        _sgr_attr=$_sgr_bg_color
 
         # use the default background color
         fn_theme_get_sgr $SGR_ATTR_BG $TATTR_BG_INACTIVE
@@ -210,13 +216,14 @@ function fn_theme_set_bg_attr()
     local -i _sgr_fg_color=$?
 
     # send triplet command
-    fn_sgr_set "${_sgr_modifier};${_sgr_fg_color};${_sgr_bg_color}"
+    fn_sgr_set "${_sgr_attr};${_sgr_fg_color};${_sgr_bg_color}"
 }
 
 function fn_theme_get_sgr()
 {
     local -i _sgr_type=$1
     local -i _attr_name=$2
+
     local -i _attr_val=${theme_active[$_attr_name]}
     local -i _sgr_code_result
 

@@ -4,19 +4,12 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-setup.sh
+# Description:  Setup script to be added to .bashrc.
 ##
 
-function fn_biw_init()
-{   
-    fn_check_interactive
-
-    fn_biw_set_env
-
-    # load keyboard codes
-    source ${BIW_HOME}/biw-term-csi.sh
-}
-
-function fn_choose_bind()
+function fn_biw_setup_bind()
 {
     local -r _bind_key=$1
 
@@ -25,11 +18,11 @@ function fn_choose_bind()
     local -r bind_int_char=$'"\201"'
     local -r bind_esc_char="\"\e${_bind_key}\""
 
-    bind -x ${bind_int_char}:fn_choose_show
+    bind -x ${bind_int_char}:fn_biw_setup_show
     bind ${bind_esc_char}:${bind_int_char}
 }
 
-function fn_choose_show()
+function fn_biw_setup_show()
 {
     if ! ${BIW_HOME}/biw-main.sh
     then
@@ -42,17 +35,14 @@ function fn_choose_show()
     rm $BIW_CH_RES_FILE
 }
 
-function fn_check_interactive()
+function fn_biw_setup_env()
 {
     if [[ ! "$-" =~ "i" ]]
     then
         echo "ERROR: This script must be sourced and not executed."
         exit 1
     fi
-}
 
-function fn_biw_set_env()
-{
     # file where history result will be saved
     export BIW_CH_RES_FILE=$HOME/.biw_selection
 
@@ -72,8 +62,14 @@ function fn_biw_set_env()
     export BIW_HOME=$_script_dir
 }
 
-# Activate bindings
-fn_biw_init
+# load env vars
+fn_biw_setup_env
+
+# load keyboard codes
+if ! source ${BIW_HOME}/biw-term-csi.sh
+then
+    return 1
+fi
 
 # set bind key here
-fn_choose_bind $CSI_KEY_DOWN
+fn_biw_setup_bind $CSI_KEY_DOWN

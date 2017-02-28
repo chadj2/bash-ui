@@ -5,6 +5,9 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-main.sh
+# Description:  Top-level script for panel menus.
 ##
 
 # generate errors if unset vars are used.
@@ -12,16 +15,18 @@ set -o nounset
 
 source ${BIW_HOME}/biw-term-csi.sh
 source ${BIW_HOME}/biw-term-sgr.sh
+source ${BIW_HOME}/biw-term-hsl.sh
 source ${BIW_HOME}/biw-theme.sh
-source ${BIW_HOME}/biw-vmenu.sh
-source ${BIW_HOME}/biw-hmenu.sh
-source ${BIW_HOME}/biw-credits.sh
+source ${BIW_HOME}/biw-panel-vmenu.sh
+source ${BIW_HOME}/biw-panel-hmenu.sh
+source ${BIW_HOME}/biw-panel-credits.sh
 
+declare -r BIW_VERSION=0.9
 declare -ri BIW_ENABLE_DEBUG=0
 
 # global widget params
 declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=9
+declare -ri BIW_PANEL_HEIGHT=10
 declare -ri BIW_PANEL_WIDTH=50
 
 # max values to load for history and file lists
@@ -309,11 +314,9 @@ function fn_biw_panic()
     local _fail_line=${BASH_LINENO[0]}
     local _command=$BASH_COMMAND
 
-    # show cursor
+    # show and restore cursor
     fn_csi_op $CSI_OP_CURSOR_SHOW
-
-    # restore default colors
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_csi_op $CSI_OP_CURSOR_RESTORE
 
     echo
     echo "PANIC Failure at: "

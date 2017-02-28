@@ -21,7 +21,7 @@ function fn_rgb16_demo()
     do
         for _color in {0..7}
         do
-            fn_sgr_color16_set $SGR_ATTR_BG $_color $_light || exit 1
+            fn_sgr_color16_set $((SGR_ATTR_BG + _light*SGR_ATTR_BRIGHT)) $_color || exit 1
             echo -n " "
         done
         fn_sgr_set $SGR_ATTR_DEFAULT

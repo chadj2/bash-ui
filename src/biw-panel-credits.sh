@@ -4,6 +4,9 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-panel-credits.sh
+# Description:  Panel for animated credits.
 ##
 
 # constants
@@ -26,6 +29,7 @@ declare -i cred_canvas_height
 
 declare -a cred_color_map
 declare -i cred_color_map_size
+declare -i cred_color_use_216=0
 declare -a cred_alpha_map
 
 function fn_cred_show()
@@ -43,22 +47,54 @@ function fn_cred_show()
 
     cred_alpha_map[cred_canvas_width]=0
 
+    # Use one of 3 color map types:
+    fn_color_map_hsl_hue
+    #fn_color_map_hsl_saturation
+    #fn_color_map_simple
+
+    cred_color_map_size=${#cred_color_map[@]}
+
     fn_cred_blank_panel
     fn_cred_load_data
-    fn_generate_color_map
+    
     fn_cred_print_data
 
     # if animation was canceled then we get a non-zero status
     return $?
 }
 
-function fn_generate_color_map()
+function fn_cred_load_data()
 {
-    fn_theme_get_sgr $SGR_ATTR_FG $TATTR_TEXT
-    _sgr_text_color=$(($? - SGR_ATTR_FG))
+    mapfile -n${cred_height} -t cred_line_data <<-EOM
 
+BIW - Bash Inline Widgets
+Version ${BIW_VERSION}
+Copyright 2017 by Chad Juliano
+chadj@pobox.com
+
+Find it at:
+https://github.com/chadj2/biw-tools
+EOM
+
+    cred_line_data_size=${#cred_line_data[*]}
+}
+
+function fn_cred_set_color()
+{
+    local -i _sgr_color=$1
+    if((cred_color_use_216))
+    then
+        fn_sgr_color216_set $SGR_ATTR_FG $_sgr_color
+    else
+        fn_sgr_color16_set $SGR_ATTR_FG $_sgr_color
+    fi
+}
+
+function fn_color_map_simple()
+{
     cred_color_map=(
-        [1]=$_sgr_text_color
+        [0]=0
+        [1]=$SGR_COL_GREEN
         [2]=$SGR_COL_YELLOW
         [3]=$SGR_COL_YELLOW
         [4]=$SGR_COL_YELLOW
@@ -71,8 +107,63 @@ function fn_generate_color_map()
         [11]=$SGR_COL_YELLOW
         [12]=$SGR_COL_YELLOW
     )
+}
 
-    cred_color_map_size=${#cred_color_map[@]}
+function fn_color_map_hsl_hue()
+{
+    local -ir _hsl_sat=4
+    local -ir _hsl_light=5
+
+    local -i _hsl_hue
+    local -i _sgr_code
+    local -i _map_idx=0
+
+    # 0 index is reserved
+    cred_color_use_216=1
+    cred_color_map=()
+    cred_color_map[_map_idx++]=0
+
+    for((_hsl_hue = HSL_HUE_GREEN; _hsl_hue <= HSL_HUE_BLUE; _hsl_hue++))
+    do
+        fn_hsl_get $_hsl_hue $_hsl_sat $_hsl_light
+        _sgr_code=$?
+
+        for((_hsl_sat_length = 0; _hsl_sat_length <= 1; _hsl_sat_length++))
+        do
+            cred_color_map[_map_idx++]=$_sgr_code
+        done
+    done
+}
+
+function fn_color_map_hsl_saturation()
+{
+    # move through the HSL cylinder on hue=12 (120 degrees)
+    local -ir _max_hsl_hue=3
+    local -ir _min_hsl_hue=-5
+    local -ir _hsl_hue=12
+    local -ir _hsl_light=5
+
+    local -i _hsl_sat
+    local -i _sgr_code
+    local -i _map_idx=0
+
+    # 0 index is reserved
+    cred_color_use_216=1
+    cred_color_map=()
+    cred_color_map[_map_idx++]=0
+
+    # go through cylinder from the color indicated by hue to its inverse.
+    # we go from partially saturated green (sat=3) because (sat=5) is too deep.
+    for((_hsl_sat = _max_hsl_hue; _hsl_sat >= _min_hsl_hue; _hsl_sat--))
+    do
+        fn_hsl_get $_hsl_hue $_hsl_sat $_hsl_light
+        _sgr_code=$?
+
+        for((_hsl_sat_length = 0; _hsl_sat_length <= 4; _hsl_sat_length++))
+        do
+            cred_color_map[_map_idx++]=$_sgr_code
+        done
+    done
 }
 
 function fn_cred_print_data()
@@ -184,7 +275,7 @@ function fn_cred_animate_text()
     # add characters to the alpha map
     if((_char_idx < _line_width))
     then
-        cred_alpha_map[_char_idx]=${#cred_color_map[@]}
+        cred_alpha_map[_char_idx]=$((cred_color_map_size - 1))
     else
         return 1
     fi
@@ -205,7 +296,7 @@ function fn_cred_animate_cursor()
     fn_biw_set_col_pos $_cursor_pos
 
     local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
-    fn_sgr_set $((SGR_ATTR_FG + _sgr_color))
+    fn_cred_set_color $_sgr_color
 
     if((_cursor_counter <= 0))
     then
@@ -271,7 +362,7 @@ function fn_cred_print_alpha()
         fi
 
         _alpha_color=${cred_color_map[_alpha_val]}
-        fn_sgr_set $((SGR_ATTR_FG + _alpha_color))
+        fn_cred_set_color $_alpha_color
 
         _char_val=${_line_val:_alpha_idx:1}
         fn_sgr_print "${_char_val}"
@@ -286,20 +377,6 @@ function fn_cred_print_alpha()
     return 0
 }
 
-function fn_cred_load_data()
-{
-    mapfile -n${cred_height} -t cred_line_data <<-EOM
-
-BIW - Bash Inline Widgets
-Copyright 2017 by Chad Juliano
-chadj@pobox.com
-
-Find it at:
-https://github.com/chadj2/biw-tools
-EOM
-
-    cred_line_data_size=${#cred_line_data[*]}
-}
 
 function fn_cred_canvas_set_cursor()
 {
@@ -309,7 +386,7 @@ function fn_cred_canvas_set_cursor()
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
 
-    fn_theme_set_bg_attr $TATTR_BG_INACTIVE
+    fn_theme_set_attr $TATTR_BG_INACTIVE
 }
 
 function fn_cred_blank_panel()
@@ -322,7 +399,7 @@ function fn_cred_blank_panel()
         fn_biw_set_cursor_pos $_row_pos 0
 
         fn_sgr_seq_start
-        fn_theme_set_bg_attr $TATTR_BG_INACTIVE
+        fn_theme_set_attr $TATTR_BG_INACTIVE
 
         if((_line_idx < cred_canvas_height))
         then

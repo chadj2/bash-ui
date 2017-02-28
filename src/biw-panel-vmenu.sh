@@ -4,6 +4,9 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+#
+# File:         biw-panel-vmenu.sh
+# Description:  Display a scrollable vertical menu.
 ##
 
 # placeholder for empty data set

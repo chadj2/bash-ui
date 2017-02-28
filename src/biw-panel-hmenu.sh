@@ -4,6 +4,9 @@
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
+# 
+# File:         biw-panel-hmenu.sh
+# Description:  Panel for horizontal menu.
 ##
 
 # Layout
@@ -109,7 +112,7 @@ function fn_hmenu_redraw()
 
     fn_sgr_seq_start
 
-        fn_theme_set_bg_attr $TATTR_BG_INACTIVE
+        fn_theme_set_attr $TATTR_BG_INACTIVE
         fn_sgr_set $SGR_ATTR_UNDERLINE
         fn_sgr_print "$_r_pad"
         fn_sgr_set $SGR_ATTR_DEFAULT
