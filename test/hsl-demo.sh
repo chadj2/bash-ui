@@ -18,7 +18,7 @@ function fn_print_padding()
     local _result
 
     printf -v _result '%*s' $_width
-    echo -n "${_result// /$_char}"
+    printf "%s" "${_result// /$_char}"
 }
 
 function fn_print_heading()
@@ -38,7 +38,7 @@ function fn_print_heading()
     fn_print_padding $_end '-'
 }
 
-function fn_hsl_sat_blocks()
+function fn_demo_hsl216_sat_blocks()
 {
     local -ir _margin=4
     local -a _sat_list=( $* )
@@ -53,7 +53,7 @@ function fn_hsl_sat_blocks()
     echo
 
     local -i _light
-    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
+    for((_light = HSL216_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _sat in ${_sat_list[@]}
         do
@@ -61,9 +61,9 @@ function fn_hsl_sat_blocks()
 
             fn_sgr_seq_start
 
-            for((_hue = 0; _hue < HSL_HUE_SIZE; _hue++))
+            for((_hue = 0; _hue < HSL216_HUE_SIZE; _hue++))
             do
-                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -77,14 +77,14 @@ function fn_hsl_sat_blocks()
     echo
 }
 
-function fn_hsl_sat_demo()
+function fn_demo_hsl216_sat()
 {
-    fn_hsl_sat_blocks 0 1
-    fn_hsl_sat_blocks 2 3
-    fn_hsl_sat_blocks 4 5
+    fn_demo_hsl216_sat_blocks 0 1
+    fn_demo_hsl216_sat_blocks 2 3
+    fn_demo_hsl216_sat_blocks 4 5
 }
 
-function fn_hsl_lum_blocks()
+function fn_demo_hsl216_lum_blocks()
 {
     local -ir _margin=4
     local -a _lum_list=( $* )
@@ -99,7 +99,7 @@ function fn_hsl_lum_blocks()
     echo
 
     local -i _light
-    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
+    for((_light = HSL216_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _light in ${_lum_list[@]}
         do
@@ -107,9 +107,9 @@ function fn_hsl_lum_blocks()
 
             fn_sgr_seq_start
 
-            for((_hue = 0; _hue < HSL_HUE_SIZE; _hue++))
+            for((_hue = 0; _hue < HSL216_HUE_SIZE; _hue++))
             do
-                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 fn_sgr_print " "
             done
             
@@ -123,14 +123,14 @@ function fn_hsl_lum_blocks()
     echo
 }
 
-function fn_hsl_lum_demo()
+function fn_demo_hsl216_lum()
 {
-    fn_hsl_lum_blocks 0 1
-    fn_hsl_lum_blocks 2 3
-    fn_hsl_lum_blocks 4 5
+    fn_demo_hsl216_lum_blocks 0 1
+    fn_demo_hsl216_lum_blocks 2 3
+    fn_demo_hsl216_lum_blocks 4 5
 }
 
-function fn_hsl_comp_blocks()
+function fn_demo_hsl216_comp_blocks()
 {
     local -ir _margin=4
     local -a _hue_list=( $* )
@@ -144,13 +144,13 @@ function fn_hsl_comp_blocks()
     echo
 
     local -i _light
-    for((_light = HSL_LIGHT_SIZE - 1; _light >= 0; _light--))
+    for((_light = HSL216_LIGHT_SIZE - 1; _light >= 0; _light--))
     do
         for _hue in ${_hue_list[@]}
         do
-            for((_sat = -1*(HSL_SAT_SIZE - 1); _sat < HSL_SAT_SIZE; _sat++))
+            for((_sat = -1*(HSL216_SAT_SIZE - 1); _sat < HSL216_SAT_SIZE; _sat++))
             do
-                fn_hsl_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
+                fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 echo -n " "
             done
             fn_sgr_set $SGR_ATTR_DEFAULT
@@ -161,19 +161,19 @@ function fn_hsl_comp_blocks()
     echo
 }
 
-function fn_hsl_comp_demo()
+function fn_demo_hsl216_comp()
 {
-    fn_hsl_comp_blocks 0 3 6
-    fn_hsl_comp_blocks 9 12 15
+    fn_demo_hsl216_comp_blocks 0 3 6
+    fn_demo_hsl216_comp_blocks 9 12 15
 }
 
-echo "Computing HSL Table..."
-fn_hsl_init
+echo "Computing HSL216 Table..."
+fn_hsl216_init
 
 # display 6 rainbows of variable saturation
-fn_hsl_sat_demo
+fn_demo_hsl216_sat
 
-#fn_hsl_lum_demo
+#fn_demo_hsl216_lum
 
 # display 6 blocks of color compliments by saturation
-fn_hsl_comp_demo
+fn_demo_hsl216_comp

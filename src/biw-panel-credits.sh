@@ -114,6 +114,7 @@ function fn_color_map_hsl_hue()
 {
     local -ir _hsl_sat=4
     local -ir _hsl_light=5
+    local -ir _color_repeat=2
 
     local -i _hsl_hue
     local -i _sgr_code
@@ -124,12 +125,12 @@ function fn_color_map_hsl_hue()
     cred_color_map=()
     cred_color_map[_map_idx++]=0
 
-    for((_hsl_hue = HSL_HUE_GREEN; _hsl_hue <= HSL_HUE_BLUE; _hsl_hue++))
+    for((_hsl_hue = HSL216_HUE_GREEN; _hsl_hue <= HSL216_HUE_BLUE; _hsl_hue++))
     do
-        fn_hsl_get $_hsl_hue $_hsl_sat $_hsl_light
+        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
         _sgr_code=$?
 
-        for((_hsl_sat_length = 0; _hsl_sat_length <= 2; _hsl_sat_length++))
+        for((_hsl_sat_length = 0; _hsl_sat_length <= $_color_repeat; _hsl_sat_length++))
         do
             cred_color_map[_map_idx++]=$_sgr_code
         done
@@ -157,7 +158,7 @@ function fn_color_map_hsl_saturation()
     # we go from partially saturated green (sat=3) because (sat=5) is too deep.
     for((_hsl_sat = _max_hsl_hue; _hsl_sat >= _min_hsl_hue; _hsl_sat--))
     do
-        fn_hsl_get $_hsl_hue $_hsl_sat $_hsl_light
+        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
         _sgr_code=$?
 
         for((_hsl_sat_length = 0; _hsl_sat_length <= 4; _hsl_sat_length++))

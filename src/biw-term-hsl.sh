@@ -6,26 +6,27 @@
 # reserved. See LICENSE.
 #
 # File:         biw-term-hsi.sh
-# Description:  Compute HSL (Hue/Saturation/Light) color space.
+# Description:  Compute HSL (Hue/Saturation/Light) color space in 216 
+#               color SGR mode.
 ##
 
 # colorspace params
-declare -ir HSL_HUE_SIZE=36
-declare -ir HSL_HUE_SECTORS=6
-declare -ir HSL_SAT_SIZE=6
-declare -ir HSL_LIGHT_SIZE=6
+declare -ir HSL216_HUE_SIZE=36
+declare -ir HSL216_HUE_SECTORS=6
+declare -ir HSL216_SAT_SIZE=6
+declare -ir HSL216_LIGHT_SIZE=6
 
 # Hue colors
-declare -ir HSL_HUE_RED=$((0*HSL_HUE_SECTORS))
-declare -ir HSL_HUE_YELLOW=$((1*HSL_HUE_SECTORS))
-declare -ir HSL_HUE_GREEN=$((2*HSL_HUE_SECTORS))
-declare -ir HSL_HUE_CYAN=$((3*HSL_HUE_SECTORS))
-declare -ir HSL_HUE_BLUE=$((4*HSL_HUE_SECTORS))
-declare -ir HSL_HUE_MAGENTA=$((5*HSL_HUE_SECTORS))
+declare -ir HSL216_HUE_RED=$((0*HSL216_HUE_SECTORS))
+declare -ir HSL216_HUE_YELLOW=$((1*HSL216_HUE_SECTORS))
+declare -ir HSL216_HUE_GREEN=$((2*HSL216_HUE_SECTORS))
+declare -ir HSL216_HUE_CYAN=$((3*HSL216_HUE_SECTORS))
+declare -ir HSL216_HUE_BLUE=$((4*HSL216_HUE_SECTORS))
+declare -ir HSL216_HUE_MAGENTA=$((5*HSL216_HUE_SECTORS))
 
 # lookup table for HSV-RGB transformations
-declare -a HSL_TABLE
-declare -ir HSL_TABLE_SIZE=$((HSL_HUE_SIZE * HSL_SAT_SIZE * HSL_LIGHT_SIZE))
+declare -a HSL216_TABLE_DATA
+declare -ir HSL216_TABLE_SIZE=$((HSL216_HUE_SIZE * HSL216_SAT_SIZE * HSL216_LIGHT_SIZE))
 
 # Interpolate y coordinates
 # Parameters)
@@ -57,11 +58,11 @@ function fn_hsl_interp_y()
 
 # Calculate HSL color space (36x6x6) for the lookup table. 
 # Normalization for S<0 or H>=36 # are handled after the table calculation
-# in fn_hsl_set.
+# in fn_hsl216_set.
 # This algorithm makes use of the fn_hsl_interp_y routine to simplify code at the 
 # cost of minor additional computations. It is adapted for integer 
 # calculations for a small set of colors.
-function fn_hsl_calc()
+function fn_hsl216_calc()
 {
     local -i _hue=$1
     local -i _sat=$2
@@ -103,25 +104,25 @@ function fn_hsl_calc()
 }
 
 # Compute HSV table of 6*6*36=1296 values. 
-function fn_hsl_init()
+function fn_hsl216_init()
 {
-    HSL_TABLE[HSL_TABLE_SIZE - 1]=0
+    HSL216_TABLE_DATA[HSL216_TABLE_SIZE - 1]=0
 
     local -i _hue _sat _light
     local -i _sgr_code
     local -i _lut_idx
 
-    for((_light = 0; _light < HSL_LIGHT_SIZE; _light++))
+    for((_light = 0; _light < HSL216_LIGHT_SIZE; _light++))
     do
-        for((_sat = 0; _sat < HSL_SAT_SIZE; _sat++))
+        for((_sat = 0; _sat < HSL216_SAT_SIZE; _sat++))
         do
-            for((_hue = 0; _hue < HSL_HUE_SIZE; _hue++))
+            for((_hue = 0; _hue < HSL216_HUE_SIZE; _hue++))
             do
-                fn_hsl_calc $_hue $_sat $_light
+                fn_hsl216_calc $_hue $_sat $_light
                 _sgr_code=$?
 
-                _lut_idx=$((_light*HSL_SAT_SIZE*HSL_HUE_SIZE + _sat*HSL_HUE_SIZE + _hue))
-                HSL_TABLE[_lut_idx]=$_sgr_code
+                _lut_idx=$((_light*HSL216_SAT_SIZE*HSL216_HUE_SIZE + _sat*HSL216_HUE_SIZE + _hue))
+                HSL216_TABLE_DATA[_lut_idx]=$_sgr_code
             done
         done
     done
@@ -134,13 +135,13 @@ function fn_hsl_init()
 #   3) Saturation [-5..5]: Indicates amount of color. Negative values will 
 #          invert color.
 #   4) Light [0..5]: Indicates luminosity.
-function fn_hsl_get()
+function fn_hsl216_get()
 { 
     local -i _hue=$1
     local -i _sat=$2
     local -i _light=$3
 
-    if((_light >= HSL_LIGHT_SIZE))
+    if((_light >= HSL216_LIGHT_SIZE))
     then
         echo "Error: L value must be the range [0..5]: ${_light}"
         exit 1
@@ -150,27 +151,27 @@ function fn_hsl_get()
     if((_sat < 0))
     then
         _sat=$((_sat * -1))
-        _hue=$((_hue + HSL_HUE_SIZE/2 - 1))
+        _hue=$((_hue + HSL216_HUE_SIZE/2 - 1))
     fi
 
     # handle cyclic hue
-    if((_hue >= HSL_HUE_SIZE))
+    if((_hue >= HSL216_HUE_SIZE))
     then
-        _hue=$((_hue % HSL_HUE_SIZE))
+        _hue=$((_hue % HSL216_HUE_SIZE))
     fi
 
     # get value from lookup table
-    local -i _lut_size=${#HSL_TABLE[*]}
+    local -i _lut_size=${#HSL216_TABLE_DATA[*]}
     local -i _sgr_code
 
     if((_lut_size > 0))
     then
         # get from table
-        _lut_idx=$((_light*HSL_SAT_SIZE*HSL_HUE_SIZE + _sat*HSL_HUE_SIZE + _hue))
-        _sgr_code=${HSL_TABLE[_lut_idx]}
+        _lut_idx=$((_light*HSL216_SAT_SIZE*HSL216_HUE_SIZE + _sat*HSL216_HUE_SIZE + _hue))
+        _sgr_code=${HSL216_TABLE_DATA[_lut_idx]}
 
     else
-        fn_hsl_calc $_hue $_sat $_light
+        fn_hsl216_calc $_hue $_sat $_light
         _sgr_code=$?
     fi
 
@@ -185,7 +186,7 @@ function fn_hsl_get()
 #   3) Saturation [-5..5]: Indicates amount of color. Negative values will 
 #          invert color.
 #   4) Light [0..5]: Indicates luminosity.
-function fn_hsl_set()
+function fn_hsl216_set()
 {
     local -i _mode=$1
     local -i _hue=$2
@@ -193,7 +194,7 @@ function fn_hsl_set()
     local -i _light=$4
 
     local -i _sgr_code
-    fn_hsl_get $_hue $_sat $_light
+    fn_hsl216_get $_hue $_sat $_light
     _sgr_code=$?
 
     fn_sgr_color216_set $_mode $_sgr_code

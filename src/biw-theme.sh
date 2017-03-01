@@ -224,7 +224,7 @@ function fn_theme_set_attr()
 
     if((_sgr_attr_fg))
     then
-        if((_sgr_attr_fg))
+        if((_sgr_attr_bg))
         then
             echo "ERROR: _sgr_attr_fg and _sgr_attr_bg can't both be set."
         fi
