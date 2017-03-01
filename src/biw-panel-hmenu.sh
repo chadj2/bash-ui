@@ -17,7 +17,8 @@ declare -i hmenu_width
 declare -i hmenu_row_pos
 
 # Indexes
-declare -i hmenu_idx_active=0
+declare -i hmenu_idx_selected
+declare -i hmenu_idx_last
 
 # Data
 declare -a hmenu_data_values
@@ -32,65 +33,67 @@ function fn_hmenu_init()
     hmenu_width=$BIW_PANEL_WIDTH
     hmenu_row_pos=0
     
+    hmenu_idx_selected=0
     hmenu_data_values=("History" "Completions")
     hmenu_data_values=("${!1}")
     hmenu_data_size=${#hmenu_data_values[*]}
+    hmenu_idx_last=$((hmenu_data_size - 1))
 }
 
 fn_hmenu_actions()
 {
     local _key=$1
+    local _result=$BIW_ACT_IGNORED
+
     case "$_key" in
         $CSI_KEY_LEFT)
-            fn_hmenu_action_left
-            return $?
+            fn_hmenu_action_move -1
+            _result=$?
             ;;
         $CSI_KEY_RIGHT)
-            fn_hmenu_action_right
-            return $?
+            fn_hmenu_action_move 1
+            _result=$?
             ;;
     esac
     
-    return $BIW_ACT_IGNORED
+    return $_result
 }
 
 function fn_hmenu_get_current_val()
 {
-    echo ${hmenu_data_values[$hmenu_idx_active]}
+    local _result_ref=$1
+    printf -v $_result_ref '%s' "${hmenu_data_values[hmenu_idx_selected]}"
 }
 
-function fn_hmenu_action_left()
+function fn_hmenu_action_move()
 {
-    if((hmenu_idx_active <= 0))
+    local _direction=$1
+
+    local _new_idx=$((hmenu_idx_selected + _direction))
+
+    if((_new_idx <= 0))
     then
-        # can't move
+        _new_idx=0
+    fi
+
+    if((_new_idx >= hmenu_idx_last))
+    then
+        _new_idx=$hmenu_idx_last
+    fi
+
+    if((hmenu_idx_selected == _new_idx))
+    then
+        # no change
         return $BIW_ACT_IGNORED
     fi
 
-    ((hmenu_idx_active -= 1))
+    hmenu_idx_selected=$_new_idx
 
     # redraw affected items
-    fn_hmenu_draw_item $((hmenu_idx_active + 1))
-    fn_hmenu_draw_item $((hmenu_idx_active))
+    fn_hmenu_draw_item $((hmenu_idx_selected - _direction))
+    fn_hmenu_draw_item $((hmenu_idx_selected))
     
-    return $BIW_ACT_HANDLED
-}
-
-function fn_hmenu_action_right()
-{
-    if((hmenu_idx_active >= (hmenu_data_size - 1)))
-    then
-        # can't move
-        return $BIW_ACT_IGNORED
-    fi
-
-    ((hmenu_idx_active += 1))
-
-    # redraw affected items
-    fn_hmenu_draw_item $((hmenu_idx_active - 1))
-    fn_hmenu_draw_item $((hmenu_idx_active))
-    
-    return $BIW_ACT_HANDLED
+    return $BIW_ACT_CHANGED
 }
 
 function fn_hmenu_redraw()
@@ -108,7 +111,7 @@ function fn_hmenu_redraw()
 
     # fill remaining line
     local _r_pad=" "
-    fn_csi_pad_string "_r_pad" $((hmenu_width - _total_width))
+    fn_sgr_pad_string "_r_pad" $((hmenu_width - _total_width))
 
     fn_sgr_seq_start
 
@@ -128,9 +131,9 @@ function fn_hmenu_draw_item()
     local _item_value=${hmenu_data_values[_item_idx]}
     local -i _print_width=$((HMENU_ITEM_WIDTH - 2))
 
-    fn_csi_pad_string "_item_value" $_print_width
+    fn_sgr_pad_string "_item_value" $_print_width
 
-    if ((_item_idx == hmenu_idx_active))
+    if ((_item_idx == hmenu_idx_selected))
     then
         _item_value="[${_item_value}]"
     else
@@ -142,7 +145,7 @@ function fn_hmenu_draw_item()
 
     fn_sgr_seq_start
 
-        fn_theme_set_attr_default $((_item_idx == hmenu_idx_active))
+        fn_theme_set_attr_default $((_item_idx == hmenu_idx_selected))
         fn_sgr_set $SGR_ATTR_UNDERLINE
         fn_sgr_print "$_item_value"
         fn_sgr_set $SGR_ATTR_DEFAULT

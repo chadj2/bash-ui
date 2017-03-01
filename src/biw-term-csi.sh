@@ -10,59 +10,49 @@
 ##
 
 # CSI op codes used with fn_csi_op
-readonly CSI_OP_SCROLL_UP='S'
-readonly CSI_OP_SCROLL_DOWN='T'
-readonly CSI_OP_ROW_INSERT='L'
-readonly CSI_OP_ROW_DELETE='M'
-readonly CSI_OP_ROW_UP='A'
-readonly CSI_OP_ROW_DOWN='B'
-readonly CSI_OP_ROW_ERASE='K'
-readonly CSI_OP_COL_POS='G'
-readonly CSI_OP_COL_BACK='D'
-readonly CSI_OP_COL_FORWARD='C'
-readonly CSI_OP_CURSOR_HIDE='?25l'
-readonly CSI_OP_CURSOR_SHOW='?25h'
-readonly CSI_OP_CURSOR_SAVE='?1048h'
-readonly CSI_OP_CURSOR_RESTORE='?1048l'
+declare -r CSI_OP_SCROLL_UP='S'
+declare -r CSI_OP_SCROLL_DOWN='T'
+declare -r CSI_OP_ROW_INSERT='L'
+declare -r CSI_OP_ROW_DELETE='M'
+declare -r CSI_OP_ROW_UP='A'
+declare -r CSI_OP_ROW_DOWN='B'
+declare -r CSI_OP_ROW_ERASE='K'
+declare -r CSI_OP_COL_POS='G'
+declare -r CSI_OP_COL_BACK='D'
+declare -r CSI_OP_COL_FORWARD='C'
+declare -r CSI_OP_GET_POSITION='6n'
+declare -r CSI_OP_SET_SCROLL='r'
+declare -r CSI_OP_CURSOR_HIDE='?25l'
+declare -r CSI_OP_CURSOR_SHOW='?25h'
+declare -r CSI_OP_CURSOR_SAVE='?1048h'
+declare -r CSI_OP_CURSOR_RESTORE='?1048l'
 
 # key codes returned by fn_csi_read_key
-readonly CSI_KEY_UP='[A'
-readonly CSI_KEY_DOWN='[B'
-readonly CSI_KEY_LEFT='[D'
-readonly CSI_KEY_RIGHT='[C'
-readonly CSI_KEY_PG_UP='[5~'
-readonly CSI_KEY_PG_DOWN='[6~'
-readonly CSI_KEY_HOME='[H'
-readonly CSI_KEY_END='[F'
-readonly CSI_KEY_EOL='EOL'
+declare -r CSI_KEY_UP='A'
+declare -r CSI_KEY_DOWN='B'
+declare -r CSI_KEY_LEFT='D'
+declare -r CSI_KEY_RIGHT='C'
+declare -r CSI_KEY_PG_UP='5'
+declare -r CSI_KEY_PG_DOWN='6'
+declare -r CSI_KEY_HOME='H'
+declare -r CSI_KEY_END='F'
+declare -r CSI_KEY_ENTER='ENT'
 
-# Codes to print from the DEC graphics charset
-readonly CSI_CHAR_LINE_VERT=$'\e(0\x78\e(B'
-readonly CSI_CHAR_LINE_HORIZ=$'\e(0\x71\e(B'
-readonly CSI_CHAR_LINE_TOP_T=$'\e(0\x77\e(B'
-readonly CSI_CHAR_LINE_BOTTOM_T=$'\e(0\x76\e(B'
-readonly CSI_CHAR_LINE_BL=$'\e(0\x6d\e(B'
-readonly CSI_CHAR_LINE_BR=$'\e(0\x6a\e(B'
-readonly CSI_CHAR_BLOCK=$'\e(0\x61\e(B'
-readonly CSI_CHAR_BULLET=$'\e(0\x7e\e(B'
-readonly CSI_CHAR_DIAMOND=$'\e(0\x60\e(B'
+# This controls how long we wait for ESC codes to arrive.
+declare -r CSI_READ_ESC_TIMEOUT=1
 
-# Executre a CSI termial command
 function fn_csi_op()
 {
     local _op=$1
-
-    # default to empty if not set
     local _param=${2:-''}
 
-    # send CSI command to terminal
+    # Executre a CSI termial command
     echo -en "\e[${_param}${_op}"
 }
 
-# read a key that could include an ESC code
 function fn_csi_read_key()
 {
-    local -r _result_var=$1
+    local -r _result_ref=$1
     local _timeout=${2:-''}
 
     local _timeout_opt=''
@@ -71,50 +61,80 @@ function fn_csi_read_key()
         _timeout_opt="-t${_timeout}"
     fi
 
-    # read character
-    local _read_result
-    read ${_timeout_opt} -s -N1 "_read_result"
-    local -i _read_status=$?
+    # change IFS so newline can be read
+    local IFS=
 
-    if [ $_read_status != 0 ]
+    # read first character
+    if ! read $_timeout_opt -s -r -N1 $_result_ref
     then
-        # got timeout
+        printf -v $_result_ref '%s' "TIMEOUT"
         return 1
     fi
 
-    # default to EOL not set
-    _read_result=${_read_result:-${CSI_KEY_EOL}}
-
-    # we add a slight delay to give bytes time to arrive
-    local -r _read_delay=0.05
-
-    # If we have an escape char then we check for a 2 byte 
-    # code like KEY_UP='[A'.
-    if [[ $_read_result == $'\e' ]]
+    if [ "${!_result_ref}" == $'\n' ]
     then
-        # read the rest of the escape code
-        read -t$_read_delay -s -N2 _read_result
+        # enter key
+        printf -v $_result_ref '%s' $CSI_KEY_ENTER
+        return 0
     fi
 
-    # If this is a 3 byte code like KEY_PG_DOWN='[6~' then
-    # we need to read the last byte. We assume that if we got 
-    # a digit in the last read then this is a 3 byte code.
-    local _pattern='[[][[:digit:]]'
-    if [[ $_read_result == $_pattern ]]
+    if [ "${!_result_ref}" != $'\e' ]
     then
-        local _extended_code
-        # read the rest of the escape code
-        read -t$_read_delay -s -N1 _extended_code
-        _read_result="${_read_result}${_extended_code}"
+        # not an escape code. We quote in case we got something 
+        # non-printable.
+        printf -v $_result_ref '%s' "NOT_ESC"
+        return 1
     fi
 
-    # set result
-    printf -v $_result_var "$_read_result"
+    # read the rest of the ESC code
+    if ! fn_csi_read_esc $_result_ref
+    then
+        printf -v $_result_ref '%s' "ESC_FAILED"
+        return 1
+    fi
 
     return 0
 }
 
-# Wait a short amount of time measured in milliseconds. 
+fn_csi_read_esc()
+{
+    local -r _result_ref=$1
+
+    # we add a slight delay to give bytes time to arrive
+
+    # check for ESC
+    if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
+    then
+        return 1
+    fi
+
+    if [ "${!_result_ref}" != '[' ]
+    then
+        return 1
+    fi
+
+    # If we have an escape char then we check for a 2 byte 
+    # code like KEY_UP='[A'.
+    if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
+    then
+        return 1
+    fi
+
+    if [[ "${!_result_ref}" == [[:alpha:]] ]]
+    then
+        # this is a 3 byte alpha code
+        return 0
+    fi
+
+    # If did not get an alpha character then we assume this is a 
+    # numeric code like KEY_PG_DOWN='\e[6~'.
+    local _numeric_code
+    fn_csi_read_delim '_numeric_code' '~'
+
+    printf -v $_result_ref '%s' "${!_result_ref}${_numeric_code}"
+    return 0
+}
+
 function fn_csi_milli_wait()
 {
     local -r _animate_delay=$1
@@ -124,11 +144,67 @@ function fn_csi_milli_wait()
     read -s -N0 -t$_animate_delay
 }
 
-function fn_csi_pad_string()
+function fn_csi_read_delim()
 {
-    local _var_name=$1
-    local -i _pad_width=$2
+    local _result_ref=$1
+    local _delimiter=$2
 
-    printf -v $_var_name "%-${_pad_width}s" "${!_var_name}"
-    printf -v $_var_name "${!_var_name:0:${_pad_width}}"
+    if ! read -t$CSI_READ_ESC_TIMEOUT -s -d$_delimiter $_result_ref
+    then
+        echo "Failed to read ESC code within timeout."
+        exit 1
+    fi
+
+    return 0
+}
+
+function fn_csi_get_row_pos()
+{
+    local _row_ref=$1
+
+    # Here we request a DSR that will return the position 
+    # of the row/column as: '\e[<row>;<col>R'
+    fn_csi_op $CSI_OP_GET_POSITION
+
+    local _read_temp
+
+    fn_csi_read_delim '_read_temp' '['
+    if [ "$_read_temp" != $'\e' ]
+    then
+        return 1
+    fi
+
+    # Warning: If there are lots of keypresses we could get an ESC code for the key
+    # between the start and end of the response to GET_POSITION. When this happens
+    # the garbage that was read will not get converted to intger and bash will 
+    # return "invalid arithmatic operator".
+
+    fn_csi_read_delim '_read_temp' ';'
+    printf -v $_row_ref '%s' "$_read_temp"
+
+    # read the column position. We don't use this.
+    fn_csi_read_delim '_read_temp' 'R'
+}
+
+function fn_csi_scroll_region()
+{
+    local -i _region_height=$1
+    local -i _direction=$2
+
+    # set the scrolling bounds
+    local -i _abs_top=$((biw_cache_row_pos - _region_height))
+    local -i _abs_bottom=$((_abs_top + _region_height - 1))
+
+    # set the scrolling bounds
+    fn_csi_op $CSI_OP_SET_SCROLL "${_abs_top};${_abs_bottom}"
+
+    if((_direction > 0))
+    then
+        fn_csi_op $CSI_OP_SCROLL_UP 1
+    else
+        fn_csi_op $CSI_OP_SCROLL_DOWN 1
+    fi
+
+    # reset the scrolling bounds to default
+    fn_csi_op $CSI_OP_SET_SCROLL
 }

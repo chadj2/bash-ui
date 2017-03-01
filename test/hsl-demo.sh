@@ -18,7 +18,7 @@ function fn_print_padding()
     local _result
 
     printf -v _result '%*s' $_width
-    printf "%s" "${_result// /$_char}"
+    printf '%s' "${_result// /$_char}"
 }
 
 function fn_print_heading()
@@ -32,7 +32,7 @@ function fn_print_heading()
     local -i _start=$(( (_width - _label_length) / 2 ))
     fn_print_padding $_start '-'
 
-    printf "%s" "$_label"
+    printf '%s' "$_label"
     
     local -i _end=$((_width - _label_length - _start))
     fn_print_padding $_end '-'

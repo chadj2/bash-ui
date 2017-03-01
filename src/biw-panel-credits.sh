@@ -59,9 +59,12 @@ function fn_cred_show()
     fn_biw_debug_print
     
     fn_cred_print_data
+    local -i _result=$?
+
+    fn_biw_debug_msg "result: %d" $_result
 
     # if animation was canceled then we get a non-zero status
-    return $?
+    return $_result
 }
 
 function fn_cred_load_data()
@@ -173,12 +176,12 @@ function fn_cred_print_data()
     local -i _line_idx
     local -i _persist_cursor=0
 
-    for((_line_idx = 0; _line_idx < cred_canvas_height; _line_idx++))
+    for((_line_idx = 0; _line_idx < cred_line_data_size; _line_idx++))
     do
         local _line_val="${cred_line_data[_line_idx]:-}"
         fn_cred_canvas_set_cursor $_line_idx 0
 
-        if((_line_idx == (cred_canvas_height - 1)))
+        if((_line_idx == (cred_line_data_size - 1)))
         then
             _persist_cursor=1
         fi
@@ -423,7 +426,7 @@ function fn_cred_blank_panel()
         then
             fn_cred_blank_line
         else
-            fn_cred_draw_bottom
+            fn_cred_bottom_line
         fi
         fn_sgr_seq_flush
     done
@@ -431,37 +434,17 @@ function fn_cred_blank_panel()
 
 function fn_cred_blank_line()
 {
-    local _line_val
-    fn_cred_repeat_chars "_line_val" $cred_canvas_width
-    fn_sgr_print $CSI_CHAR_LINE_VERT
+    local _line_val=""
+    fn_sgr_pad_string "_line_val" $cred_canvas_width
+    fn_sgr_graphic_print $SGI_CHAR_LINE_VERT
     fn_sgr_print "$_line_val"
-    fn_sgr_print $CSI_CHAR_LINE_VERT
+    fn_sgr_graphic_print $SGI_CHAR_LINE_VERT
 }
 
-function fn_cred_draw_bottom()
+function fn_cred_bottom_line()
 {
-    local _dsc_start=$'\e(0'
-    local _dsc_horiz_line=$'\x71'
-    local _dsc_end=$'\e(B'
-
     # draw bottom box
-    fn_sgr_print $CSI_CHAR_LINE_BL
-    fn_sgr_print $_dsc_start
-
-    local _bottom_line
-    fn_cred_repeat_chars "_bottom_line" $cred_canvas_width $_dsc_horiz_line
-    fn_sgr_print $_bottom_line
-
-    fn_sgr_print $CSI_CHAR_LINE_BR
-    fn_sgr_print $_dsc_end
-}
-
-function fn_cred_repeat_chars()
-{
-    local _var_name=$1
-    local -i _pad_width=$2
-    local _pad_char=${3:- }
-
-    printf -v $_var_name '%*s' $_pad_width
-    printf -v $_var_name "${!_var_name// /${_pad_char}}"
+    fn_sgr_graphic_print $SGI_CHAR_LINE_BL
+    fn_sgr_print_h_line $cred_canvas_width
+    fn_sgr_graphic_print $SGI_CHAR_LINE_BR
 }

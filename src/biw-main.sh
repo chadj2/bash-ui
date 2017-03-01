@@ -23,16 +23,21 @@ source ${BIW_HOME}/biw-panel-credits.sh
 
 declare -r BIW_VERSION=0.9
 
+# debug only
+declare -i BIW_DEBUG_ENABLE=1
+declare -i BIW_DEBUG_SEQ=0
+declare BIW_DEBUG_MSG=''
+
 # global widget params
 declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=12
-declare -ri BIW_PANEL_WIDTH=50
+declare -ri BIW_PANEL_HEIGHT=20
+declare -ri BIW_PANEL_WIDTH=60
 
 # max values to load for history and file lists
-declare -ri BIW_VALUES_MAX=30
+declare -ri BIW_VALUES_MAX=50
 
 declare -ri BIW_ACT_IGNORED=1
-declare -ri BIW_ACT_HANDLED=0
+declare -ri BIW_ACT_CHANGED=0
 
 declare -r BIW_OC_ANIMATE_DELAY=0.015
 
@@ -41,6 +46,9 @@ declare -r BIW_MENU_HISTORY="History"
 declare -r BIW_MENU_COMP="File"
 declare -r BIW_MENU_THEME="Theme"
 declare -r BIW_MENU_CREDITS="Credits"
+
+# cached position of the curor after restore
+declare -i biw_cache_row_pos
 
 function fn_biw_main()
 {
@@ -59,7 +67,8 @@ function fn_biw_main()
     fn_biw_show
 
     # get result from index
-    local _result=$(fn_vmenu_get_current_val)
+    local _result
+    fn_vmenu_get_current_val "_result"
 
     # save to temporary file
     echo $_result > $BIW_CH_RES_FILE
@@ -74,7 +83,7 @@ function fn_biw_show()
 
     while [ 1 ]
     do
-        local _menu_val=$(fn_hmenu_get_current_val)
+        fn_hmenu_get_current_val "_menu_val"
 
         case $_menu_val in
             $BIW_MENU_HISTORY)
@@ -103,7 +112,7 @@ function fn_biw_show()
 
 function fn_biw_process_key()
 {
-    local _result_key=$1
+    local _key_ref=$1
     local _timeout=${2:-''}
 
     # don't print debug if we are animating something 
@@ -112,21 +121,22 @@ function fn_biw_process_key()
         fn_biw_debug_print
     fi
 
-    fn_csi_read_key $_result_key $_timeout
-    if [ $? != 0 ]
+    if ! fn_csi_read_key $_key_ref $_timeout
     then
         # got timeout
         return 0
     fi
 
-    fn_hmenu_actions "${!_result_key}"
-    if [ $? == $BIW_ACT_HANDLED ]
+    fn_biw_debug_msg "_key=<%s>" "${!_key_ref}"
+
+    fn_hmenu_actions "${!_key_ref}"
+    if [ $? == $BIW_ACT_CHANGED ]
     then
         # hmenu was changed so panel is being switched
         # return 1 so the controller will exit
         return 1
     fi
-
+    
     # return 0 so the loop will continue
     return 0
 }
@@ -179,7 +189,7 @@ function fn_biw_list_controller()
     do
         fn_vmenu_actions "$_key"
 
-        if [ "$_key" == $CSI_KEY_EOL ]
+        if [ "$_key" == $CSI_KEY_ENTER ]
         then
             # we got the enter key so close the menu
             return 1
@@ -200,16 +210,16 @@ function fn_biw_theme_controller()
     while fn_biw_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $BIW_ACT_HANDLED ]
+        if [ $? == $BIW_ACT_CHANGED ]
         then
             # use the vmenu index to determine the selected theme
-            fn_theme_set_idx_active $vmenu_idx_active
+            fn_theme_set_idx_active $vmenu_idx_selected
             fn_hmenu_redraw
             fn_vmenu_redraw
         fi
 
         case "$_key" in
-            $CSI_KEY_EOL) 
+            $CSI_KEY_ENTER) 
                 # Save selected Theme
                 fn_theme_save
 
@@ -261,8 +271,32 @@ function fn_biw_open()
     # hide the cursor to eliminate flicker
     fn_csi_op $CSI_OP_CURSOR_HIDE
 
+    # get the current position of the cursor
+    fn_csi_get_row_pos 'biw_cache_row_pos'
+
+    # scroll the screen to make space.
+    fn_biw_scroll_open
+
     # save the cursor for a "home position"
     fn_csi_op $CSI_OP_CURSOR_SAVE
+}
+
+function fn_biw_scroll_open()
+{
+    local -i _move_lines=$((biw_cache_row_pos - BIW_PANEL_HEIGHT - 1))
+    #echo "biw_cache_row_pos: $biw_cache_row_pos"
+    #exit
+
+    # if we are too close to the top of the screen then we need 
+    # to move down instead of scroll up.
+    if((_move_lines < 0))
+    then
+        fn_csi_op $CSI_OP_ROW_DOWN $BIW_PANEL_HEIGHT
+
+        # update cursor position
+        fn_csi_get_row_pos 'biw_cache_row_pos'
+        return
+    fi
 
     # animate open
     for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
@@ -329,16 +363,13 @@ function fn_biw_panic()
 
     echo "Call stack:"
     local _frame=0
-    while caller $_frame; do
-        ((_frame++));
+    while caller $_frame
+    do
+        ((_frame++))
     done
 
     exit 1
 }
-
-declare -i BIW_DEBUG_ENABLE=0
-declare -i BIW_DEBUG_SEQ=0
-declare BIW_DEBUG_MSG=''
 
 fn_biw_debug_print()
 {
@@ -350,7 +381,7 @@ fn_biw_debug_print()
     fn_csi_op $CSI_OP_CURSOR_RESTORE
     fn_csi_op $CSI_OP_ROW_ERASE
 
-    printf "DEBUG(%s): %s" $BIW_DEBUG_SEQ "$BIW_DEBUG_MSG"
+    printf 'DEBUG(%03d): %s' $BIW_DEBUG_SEQ "${BIW_DEBUG_MSG:-<none>}"
 
     BIW_DEBUG_MSG=''
     ((BIW_DEBUG_SEQ++))
@@ -363,7 +394,7 @@ fn_biw_debug_msg()
         return
     fi
 
-    local _pattern="${1:-<no message>}"
+    local _pattern="${1:-<empty>}"
     shift
     printf -v BIW_DEBUG_MSG "%s: ${_pattern}" ${FUNCNAME[1]} "$@" 
 }

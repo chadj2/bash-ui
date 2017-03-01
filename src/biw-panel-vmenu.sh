@@ -13,7 +13,7 @@
 declare -r VMENU_EMPTY_TEXT="<empty>"
 
 # Data indexes
-declare -i vmenu_idx_active
+declare -i vmenu_idx_selected
 declare -i vmenu_idx_last
 declare -a vmenu_data_values
 
@@ -47,7 +47,7 @@ function fn_vmenu_init()
     vmenu_idx_last=$((vmenu_data_size - 1))
 
     # set active index if passed as an argument. Else default to 0.
-    vmenu_idx_active=${2:-0}
+    vmenu_idx_selected=${2:-0}
     vmenu_idx_checked=-1
 
     # panel display area defaults to the start of the list. This 
@@ -58,179 +58,134 @@ function fn_vmenu_init()
 fn_vmenu_actions()
 {
     local _key=$1
+    local _result=$BIW_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_UP)
-            fn_vmenu_action_up
-            return $?
+            fn_vmenu_action_move -1
+            _result=$?
             ;;
         $CSI_KEY_DOWN)
-            fn_vmenu_action_down
-            return $?
+            fn_vmenu_action_move 1
+            _result=$?
             ;;
         $CSI_KEY_PG_UP)
-            fn_vmenu_action_page_up
-            return $?
+            fn_vmenu_action_move $((-1 * vmenu_height))
+            _result=$?
             ;;
         $CSI_KEY_PG_DOWN)
-            fn_vmenu_action_page_down
-            return $?
+            fn_vmenu_action_move $((vmenu_height))
+            _result=$?
             ;;
         $CSI_KEY_HOME)
-            fn_vmenu_action_home
-            return $?
+            fn_vmenu_action_move $((-1 * vmenu_idx_selected))
+            _result=$?
             ;;
         $CSI_KEY_END)
-            fn_vmenu_action_end
-            return $?
+            fn_vmenu_action_move $((vmenu_idx_last - vmenu_idx_selected))
+            _result=$?
             ;;
     esac
 
-    fn_biw_debug_msg "BIW_ACT_IGNORED: _key=%s" "$_key"
-    return $BIW_ACT_IGNORED
+    return $_result
 }
 
 function fn_vmenu_get_current_val()
 {
-    echo ${vmenu_data_values[$vmenu_idx_active]}
+    local _result_ref=$1
+    printf -v $_result_ref '%s' "${vmenu_data_values[$vmenu_idx_selected]}"
 }
 
-function fn_vmenu_action_down()
+function fn_vmenu_action_move()
 {
-    if ((vmenu_idx_active >= vmenu_idx_last))
+    local -i _relative_idx=$1
+
+    local -i _new_idx=$((vmenu_idx_selected + _relative_idx))
+
+    if((_new_idx < 0))
     then
-        # we are at the end of the data so we can't move
+        _new_idx=0
+    fi
+
+    if((_new_idx >= vmenu_idx_last))
+    then
+        _new_idx=$vmenu_idx_last
+    fi
+
+    if ((vmenu_idx_selected == _new_idx))
+    then
+        # no change
         return $BIW_ACT_IGNORED
     fi
 
-    # move active index
-    ((vmenu_idx_active += 1))
+    vmenu_idx_selected=$_new_idx
 
-    if ((vmenu_idx_active > vmenu_idx_panel_end))
+    if (((vmenu_idx_selected >= vmenu_idx_panel_top) 
+        && (vmenu_idx_selected <= vmenu_idx_panel_end)))
     then
-        # new index has exceeded the bounds of the window
-        ((vmenu_idx_panel_top += 1))
-        fn_vmenu_redraw
-    else
-        # redraw affected rows
-        fn_vmenu_draw_row $((vmenu_idx_active - 1))
-        fn_vmenu_draw_row $vmenu_idx_active
-
-        fn_biw_debug_msg "idx=%s" $vmenu_idx_active
+        # moving selection within existing bounds
+        fn_vmenu_move_selector $_relative_idx
+        return $BIW_ACT_CHANGED
     fi
 
-    return $BIW_ACT_HANDLED
-}
-
-function fn_vmenu_action_up()
-{
-    if ((vmenu_idx_active <= 0))
+    if((_relative_idx == -1 || _relative_idx == 1))
     then
-        # we are at the start of the data so we can't move
-        return $BIW_ACT_IGNORED
+        # use fast single row scroll
+        fn_vmenu_fast_scroll $_relative_idx
+        return $BIW_ACT_CHANGED
     fi
 
-    ((vmenu_idx_active -= 1))
-
-    if ((vmenu_idx_active < vmenu_idx_panel_top))
-    then
-        # new index has exceeded the bounds of the window
-        ((vmenu_idx_panel_top -= 1))
-        fn_vmenu_redraw
-    else
-        # redraw affected rows
-        fn_vmenu_draw_row $((vmenu_idx_active + 1))
-        fn_vmenu_draw_row $vmenu_idx_active
-
-        fn_biw_debug_msg "idx=%s" $vmenu_idx_active
-    fi
-
-    return $BIW_ACT_HANDLED
-}
-
-function fn_vmenu_action_page_down()
-{
-    if ((vmenu_idx_active >= vmenu_idx_last))
-    then
-        # we are at the end of the data so we can't move
-        return $BIW_ACT_IGNORED
-    fi
-
-    ((vmenu_idx_active += vmenu_height))
-
-    if((vmenu_idx_active > vmenu_idx_last))
-    then
-        vmenu_idx_active=$vmenu_idx_last
-    fi
-
+    # redraw entire screen
     fn_vmenu_redraw
 
-    return $BIW_ACT_HANDLED
+    return $BIW_ACT_CHANGED
 }
 
-function fn_vmenu_action_page_up()
+function fn_vmenu_fast_scroll()
 {
-    if ((vmenu_idx_active <= 0))
-    then
-        # we are at the end of the data so we can't move
-        return $BIW_ACT_IGNORED
-    fi
+    local -i _direction=$1
 
-    ((vmenu_idx_active -= vmenu_height))
+    # draw the row to be scrolled to update the selection color
+    fn_vmenu_draw_row $((vmenu_idx_selected - _direction)) $_direction
 
-    if((vmenu_idx_active <= 0))
-    then
-        vmenu_idx_active=0
-    fi
+    fn_csi_scroll_region $vmenu_height $_direction
 
-    fn_vmenu_redraw
+    ((vmenu_idx_panel_top += _direction))
+    ((vmenu_idx_panel_end += _direction))
 
-    return $BIW_ACT_HANDLED
+    fn_vmenu_draw_row $((vmenu_idx_panel_top))
+    fn_vmenu_draw_row $((vmenu_idx_panel_top + vmenu_height - 1))
+
+    #fn_vmenu_redraw
+    fn_biw_debug_msg "direction=%+d idx=%d" $_direction $vmenu_idx_selected
 }
 
-function fn_vmenu_action_home()
+function fn_vmenu_move_selector()
 {
-    if ((vmenu_idx_active <= 0))
-    then
-        # we are at the end of the data so we can't move
-        return $BIW_ACT_IGNORED
-    fi
+    local -i _direction=$1
 
-    vmenu_idx_active=0
-    fn_vmenu_redraw
+    # redraw affected rows
+    fn_vmenu_draw_row $((vmenu_idx_selected - _direction))
+    fn_vmenu_draw_row $vmenu_idx_selected
 
-    return $BIW_ACT_HANDLED
-}
-
-function fn_vmenu_action_end()
-{
-    if ((vmenu_idx_active >= vmenu_idx_last))
-    then
-        # we are at the end of the data so we can't move
-        return $BIW_ACT_IGNORED
-    fi
-
-    vmenu_idx_active=$vmenu_idx_last
-    fn_vmenu_redraw
-
-    return $BIW_ACT_HANDLED
+    fn_biw_debug_msg "direction=%+d idx=%d" $_direction $vmenu_idx_selected
 }
 
 function fn_vmenu_redraw()
 {
     # snap window up to the active row
-    if((vmenu_idx_panel_top > vmenu_idx_active))
+    if((vmenu_idx_panel_top > vmenu_idx_selected))
     then
-        vmenu_idx_panel_top=$vmenu_idx_active
+        vmenu_idx_panel_top=$vmenu_idx_selected
     fi
 
     local -i _idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_height - 1))
 
     # snap window down to the active row
-    if((_idx_panel_bottom < vmenu_idx_active))
+    if((_idx_panel_bottom < vmenu_idx_selected))
     then
-        ((vmenu_idx_panel_top += (vmenu_idx_active - _idx_panel_bottom)))
-        _idx_panel_bottom=$vmenu_idx_active
+        ((vmenu_idx_panel_top += (vmenu_idx_selected - _idx_panel_bottom)))
+        _idx_panel_bottom=$vmenu_idx_selected
     fi
 
     # adjust the last index if there are not enough values to display
@@ -241,8 +196,8 @@ function fn_vmenu_redraw()
         vmenu_idx_panel_end=$vmenu_idx_last
     fi
 
-    fn_biw_debug_msg 'fn_vmenu_redraw <A=%s T=%s E=%s B=%s>' \
-        $vmenu_idx_active \
+    fn_biw_debug_msg 'A=%d T=%d E=%d B=%d' \
+        $vmenu_idx_selected \
         $vmenu_idx_panel_top \
         $vmenu_idx_panel_end \
         $_idx_panel_bottom
@@ -259,6 +214,7 @@ function fn_vmenu_redraw()
 function fn_vmenu_draw_row()
 {
     local -i _line_idx=$1
+    local -i _slider_lookahead=${2:-0}
 
     # position cursor
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
@@ -278,7 +234,7 @@ function fn_vmenu_draw_row()
         local -i _ind_width=$?
         local -i _selection_width=$((vmenu_width - _ind_width - 1))
         fn_vmenu_draw_selection $_line_idx $_selection_width
-        fn_vmenu_draw_slider $_line_idx
+        fn_vmenu_draw_slider $((_line_idx - _slider_lookahead))
 
     fn_sgr_seq_flush
 
@@ -299,7 +255,7 @@ function fn_menu_draw_indicator()
 
         if((_line_idx == vmenu_idx_checked))
         then
-            _line_indicator=$CSI_CHAR_DIAMOND
+            fn_sgr_graphic_set _line_indicator $SGI_CHAR_DIAMOND
         fi
     else
         _line_indicator=$_line_idx
@@ -309,7 +265,7 @@ function fn_menu_draw_indicator()
     _line_indicator="[${_line_indicator}]"
     ((_line_indicator_size += 2))
 
-    fn_theme_set_attr_slider $((vmenu_idx_active == _line_idx))
+    fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "${_line_indicator}"
 
     return $_line_indicator_size
@@ -322,23 +278,25 @@ function fn_vmenu_draw_selection()
 
     # get line data from array and add space padding
     local _line_result=" ${vmenu_data_values[$_line_idx]}"
-    fn_csi_pad_string "_line_result" $_print_width
+    fn_sgr_pad_string "_line_result" $_print_width
 
-    fn_theme_set_attr_default $((vmenu_idx_active == _line_idx))
+    fn_theme_set_attr_default $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "${_line_result}"
 }
 
 function fn_vmenu_draw_slider()
 {
     local -i _line_idx=$1
-    local _last_char=$CSI_CHAR_LINE_VERT
+
+    local _last_char
+    fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_VERT
 
     if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
         then
-            _last_char=$CSI_CHAR_LINE_TOP_T
+            fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_TOP_T
         else
             _last_char='^'
         fi
@@ -347,12 +305,12 @@ function fn_vmenu_draw_slider()
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            _last_char=$CSI_CHAR_LINE_BOTTOM_T
+            fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_BOTTOM_T
         else
             _last_char='v'
         fi
     fi
 
-    fn_theme_set_attr_slider $((vmenu_idx_active == _line_idx))
+    fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "${_last_char}"
 }

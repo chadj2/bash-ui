@@ -16,7 +16,7 @@ function fn_biw_setup_bind()
     # We use 2 binds here because of an issue bash has with 
     # multi-char escape sequences.
     local -r bind_int_char=$'"\201"'
-    local -r bind_esc_char="\"\e${_bind_key}\""
+    local -r bind_esc_char="\"\e[${_bind_key}\""
 
     bind -x ${bind_int_char}:fn_biw_setup_show
     bind ${bind_esc_char}:${bind_int_char}
