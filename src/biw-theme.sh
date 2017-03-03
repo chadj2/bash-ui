@@ -31,13 +31,13 @@ declare -ra THEME_TYPE_BRIGHT=(
     [$TATTR_TEXT]=$SGR_COL_BLACK
     [$TATTR_BG_INACTIVE]=$((SGR_COL_BLUE + SGR_ATTR_BRIGHT))
     [$TATTR_BG_ACTIVE]=$((SGR_COL_RED + SGR_ATTR_BRIGHT))
-    [$TATTR_SL_INACTIVE]=$((SGR_COL_CYAN + SGR_ATTR_BRIGHT))
-    [$TATTR_SL_ACTIVE]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
+    [$TATTR_SL_INACTIVE]=$SGR_COL_CYAN
+    [$TATTR_SL_ACTIVE]=$SGR_COL_YELLOW
 )
 
 declare -ra THEME_TYPE_DARK=(
     [$TATTR_NAME]="Dark"
-    [$TATTR_TEXT]=$((SGR_COL_WHITE + SGR_ATTR_BRIGHT))
+    [$TATTR_TEXT]=$SGR_COL_WHITE
     [$TATTR_BG_INACTIVE]=$SGR_COL_BLACK
     [$TATTR_BG_ACTIVE]=$SGR_COL_RED
     [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
@@ -55,7 +55,7 @@ declare -ra THEME_TYPE_MONO=(
 
 declare -ra THEME_TYPE_MATRIX=(
     [$TATTR_NAME]="Matrix"
-    [$TATTR_TEXT]=$(($SGR_COL_GREEN + SGR_ATTR_BRIGHT))
+    [$TATTR_TEXT]=$((SGR_COL_GREEN + SGR_ATTR_BRIGHT))
     [$TATTR_BG_INACTIVE]=$SGR_COL_BLACK
     [$TATTR_BG_ACTIVE]=$TATTR_SGR_INVERT
     [$TATTR_SL_INACTIVE]=$SGR_COL_BLACK
@@ -66,8 +66,8 @@ declare -ra THEME_TYPE_IMPACT=(
     [$TATTR_NAME]="Impact"
     [$TATTR_TEXT]=$((SGR_COL_YELLOW + SGR_ATTR_BRIGHT))
     [$TATTR_BG_INACTIVE]=$((SGR_COL_BLACK + SGR_ATTR_BRIGHT))
-    [$TATTR_BG_ACTIVE]=$((SGR_COL_BLUE))
-    [$TATTR_SL_INACTIVE]=$((SGR_COL_RED))
+    [$TATTR_BG_ACTIVE]=$SGR_COL_BLUE
+    [$TATTR_SL_INACTIVE]=$SGR_COL_RED
     [$TATTR_SL_ACTIVE]=$TATTR_SGR_INVERT
 )
 
@@ -207,7 +207,7 @@ function fn_theme_set_attr()
         fn_sgr_seq_start
     fi
 
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
 
     fn_theme_set_color $SGR_ATTR_BG $_bg_attr_name
     local -i _sgr_attr_bg=$?
@@ -216,7 +216,7 @@ function fn_theme_set_attr()
     then
         # this is a attribute and not a color so set the background
         fn_theme_set_color $SGR_ATTR_BG $TATTR_BG_INACTIVE
-        fn_sgr_set $_sgr_attr_bg
+        fn_sgr_op $_sgr_attr_bg
     fi
 
     fn_theme_set_color $SGR_ATTR_FG $TATTR_TEXT
@@ -228,7 +228,7 @@ function fn_theme_set_attr()
         then
             echo "ERROR: _sgr_attr_fg and _sgr_attr_bg can't both be set."
         fi
-        fn_sgr_set $_sgr_attr_fg
+        fn_sgr_op $_sgr_attr_fg
     fi
 
     if((_bg_sgr_nested))

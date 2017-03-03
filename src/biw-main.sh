@@ -13,44 +13,41 @@
 # generate errors if unset vars are used.
 set -o nounset
 
-source ${BIW_HOME}/biw-term-csi.sh
 source ${BIW_HOME}/biw-term-sgr.sh
-#source ${BIW_HOME}/biw-term-decg.sh
+source ${BIW_HOME}/biw-term-csi.sh
 source ${BIW_HOME}/biw-term-utf8.sh
 source ${BIW_HOME}/biw-term-hsl.sh
 source ${BIW_HOME}/biw-theme.sh
 source ${BIW_HOME}/biw-panel-vmenu.sh
 source ${BIW_HOME}/biw-panel-hmenu.sh
 source ${BIW_HOME}/biw-panel-credits.sh
+source ${BIW_HOME}/biw-controller.sh
 
 declare -r BIW_VERSION=0.9
-
-# debug only
-declare -i BIW_DEBUG_ENABLE=0
-declare -i BIW_DEBUG_SEQ=0
-declare BIW_DEBUG_MSG=''
 
 # global widget params
 declare -ri BIW_MARGIN=10
 declare -ri BIW_PANEL_HEIGHT=20
 declare -ri BIW_PANEL_WIDTH=60
 
-# max values to load for history and file lists
-declare -ri BIW_VALUES_MAX=50
+declare -r BIW_OC_ANIMATE_DELAY=0.01
 
-declare -ri BIW_ACT_IGNORED=1
-declare -ri BIW_ACT_CHANGED=0
-
-declare -r BIW_OC_ANIMATE_DELAY=0.015
-
-# Options for HMenu
+# Entires in HMenu
 declare -r BIW_MENU_HISTORY="History"
-declare -r BIW_MENU_COMP="File"
+declare -r BIW_MENU_BROWSE="File"
 declare -r BIW_MENU_THEME="Theme"
 declare -r BIW_MENU_CREDITS="Credits"
 
 # cached position of the curor after restore
 declare -i biw_cache_row_pos
+
+# selected result when a panel is closed
+declare biw_selection_result
+
+# debug only
+declare -i BIW_DEBUG_ENABLE=0
+declare -i BIW_DEBUG_SEQ=0
+declare BIW_DEBUG_MSG=''
 
 function fn_biw_main()
 {
@@ -59,7 +56,7 @@ function fn_biw_main()
 
     local -a _hmenu_values=(
         $BIW_MENU_HISTORY 
-        $BIW_MENU_COMP 
+        $BIW_MENU_BROWSE 
         $BIW_MENU_THEME
         $BIW_MENU_CREDITS)
 
@@ -68,37 +65,33 @@ function fn_biw_main()
     # show the widgets
     fn_biw_show
 
-    # get result from index
-    local _result
-    fn_vmenu_get_current_val "_result"
-
     # save to temporary file
-    echo $_result > $BIW_CH_RES_FILE
+    echo $biw_selection_result > $BIW_CH_RES_FILE
 }
 
 function fn_biw_show()
 {
-    local -r _history_cmd="fc -lnr -$BIW_VALUES_MAX"
-    local -r _comp_cmd="compgen -A file ${READLINE_LINE}"
+    local -r _history_cmd="fc -lnr -$CTL_LIST_MAX"
 
     fn_biw_open
 
     while [ 1 ]
     do
         fn_hmenu_get_current_val "_menu_val"
+        biw_selection_result=''
 
         case $_menu_val in
             $BIW_MENU_HISTORY)
-                fn_biw_list_controller "$_history_cmd"
+                fn_ctl_list_controller "$_history_cmd"
                 ;;
-            $BIW_MENU_COMP)
-                fn_biw_list_controller "$_comp_cmd"
+            $BIW_MENU_BROWSE)
+                fn_ctl_browse_controller
                 ;;
             $BIW_MENU_THEME)
-                fn_biw_theme_controller
+                fn_ctl_theme_controller
                 ;;
             $BIW_MENU_CREDITS)
-                fn_biw_credits_controller
+                fn_ctl_credits_controller
                 ;;
         esac
 
@@ -110,129 +103,6 @@ function fn_biw_show()
     done
 
     fn_biw_close
-}
-
-function fn_biw_process_key()
-{
-    local _key_ref=$1
-    local _timeout=${2:-''}
-
-    # don't print debug if we are animating something 
-    if [ -z "$_timeout" ]
-    then
-        fn_biw_debug_print
-    fi
-
-    if ! fn_csi_read_key $_key_ref $_timeout
-    then
-        # got timeout
-        return 0
-    fi
-
-    fn_biw_debug_msg "_key=<%s>" "${!_key_ref}"
-
-    fn_hmenu_actions "${!_key_ref}"
-    if [ $? == $BIW_ACT_CHANGED ]
-    then
-        # hmenu was changed so panel is being switched
-        # return 1 so the controller will exit
-        return 1
-    fi
-    
-    # return 0 so the loop will continue
-    return 0
-}
-
-function fn_biw_credits_controller()
-{
-    # change to matrix theme
-    fn_theme_idx_from_name THEME_TYPE_MATRIX
-    local -i _theme_idx=$?
-    fn_theme_set_idx_active $_theme_idx
-
-    fn_hmenu_redraw
-
-    # show animation
-    fn_cred_show
-    if [ $? == 0 ]
-    then
-        # if redraw terminated normally then wait for user input
-        local _key
-        while fn_biw_process_key _key
-        do
-            # ignore all input not from hmenu
-            echo -n
-        done
-    fi
-
-    fm_biw_theme_set_default
-
-    return 0
-}
-
-function fn_biw_list_controller()
-{
-    local _panel_command=$1
-    local -a _values
-
-    fm_biw_theme_set_default
-
-    # read command into _values
-    mapfile -t -n $BIW_VALUES_MAX _values < <($_panel_command)
-
-    # remove first 2 leading blanks for history case
-    _values=("${_values[@]#[[:blank:]][[:blank:]]}")
-
-    fn_vmenu_init _values[@]
-    fn_vmenu_redraw
-
-    local _key
-    while fn_biw_process_key _key
-    do
-        fn_vmenu_actions "$_key"
-
-        if [ "$_key" == $CSI_KEY_ENTER ]
-        then
-            # we got the enter key so close the menu
-            return 1
-        fi
-    done
-
-    return 0
-}
-
-function fn_biw_theme_controller()
-{
-    # load theme data into menu
-    fn_vmenu_init "theme_name_list[@]" $theme_active_idx
-    vmenu_idx_checked=$theme_active_idx
-    fn_vmenu_redraw
-
-    local _key
-    while fn_biw_process_key _key
-    do
-        fn_vmenu_actions "$_key"
-        if [ $? == $BIW_ACT_CHANGED ]
-        then
-            # use the vmenu index to determine the selected theme
-            fn_theme_set_idx_active $vmenu_idx_selected
-            fn_hmenu_redraw
-            fn_vmenu_redraw
-        fi
-
-        case "$_key" in
-            $CSI_KEY_ENTER) 
-                # Save selected Theme
-                fn_theme_save
-
-                # update checkbox
-                vmenu_idx_checked=$theme_active_idx
-                fn_vmenu_redraw
-                ;;
-        esac
-    done
-
-    return 0
 }
 
 function fn_biw_set_cursor_pos()
@@ -249,12 +119,6 @@ function fn_biw_set_col_pos()
 {
     local -i _abs_col=$1
     fn_csi_op $CSI_OP_COL_POS $((BIW_MARGIN + _abs_col))
-}
-
-function fm_biw_theme_set_default()
-{
-    fn_theme_set_idx_active $theme_saved_idx
-    fn_hmenu_redraw
 }
 
 function fn_biw_open()

@@ -34,6 +34,14 @@ declare -ri  SGR_COL_DEFAULT=9
 declare -i sgr_buffer_active=0
 declare -a sgr_buffer_data
 
+# output an SGR command sequence
+function fn_sgr_op()
+{
+    local _param=$1
+
+    local _cmd="\e[${_param}m"
+    fn_sgr_seq_write "$_cmd"
+}
 
 # Optionally save output to an array buffer.
 function fn_sgr_print()
@@ -43,25 +51,19 @@ function fn_sgr_print()
     # escape slashes
     _out="${_out//\\/\\\\}"
 
-    if((sgr_buffer_active > 0))
-    then
-        sgr_buffer_data+="$_out"
-    else
-        echo -en "$_out"
-    fi
+    fn_sgr_seq_write "$_out"
 }
 
-# output an SGR command sequence
-function fn_sgr_set()
+# output data to the buffer
+function fn_sgr_seq_write()
 {
-    local _param=$1
-    local _cmd="\e[${_param}m"
+    local _data=$1
 
     if((sgr_buffer_active > 0))
     then
-        sgr_buffer_data+="$_cmd"
+        sgr_buffer_data+="$_data"
     else
-        echo -en "$_cmd"
+        echo -en "$_data"
     fi
 }
 
@@ -87,9 +89,13 @@ function fn_sgr_seq_flush()
         return
     fi
 
-    # join buffer lines and echo
-    local IFS=''
-    echo -en "${sgr_buffer_data[*]}"
+    local -i _buf_size=${#sgr_buffer_data[@]}
+    if((_buf_size > 0)) 
+    then
+        # join buffer lines and echo
+        local IFS=''
+        echo -en "${sgr_buffer_data[*]}"
+    fi 
 
     # clear out buffer
     sgr_buffer_data=()
@@ -116,7 +122,7 @@ function fn_sgr_color16_set()
     local -i _color=$2
 
     local -i _sgr_code=$((_color + _sgr_attr))
-    fn_sgr_set $_sgr_code
+    fn_sgr_op $_sgr_code
 }
 
 # Send 216 color SGR code.
@@ -128,7 +134,7 @@ function fn_sgr_color216_set()
     local -i _sgr_attr=$1
     local -i _sgr_code=$2
     local -i _sgr_op=$((_sgr_attr + 8))
-    fn_sgr_set "${_sgr_op};5;${_sgr_code}"
+    fn_sgr_op "${_sgr_op};5;${_sgr_code}"
 }
 
 # Greyscale color space (26)

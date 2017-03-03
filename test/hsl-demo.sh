@@ -68,7 +68,7 @@ function fn_demo_hsl216_sat_blocks()
             done
             
             fn_sgr_seq_flush
-            fn_sgr_set $SGR_ATTR_DEFAULT
+            fn_sgr_op $SGR_ATTR_DEFAULT
 
             fn_print_padding $_margin ' '
         done
@@ -114,7 +114,7 @@ function fn_demo_hsl216_lum_blocks()
             done
             
             fn_sgr_seq_flush
-            fn_sgr_set $SGR_ATTR_DEFAULT
+            fn_sgr_op $SGR_ATTR_DEFAULT
 
             fn_print_padding $_margin ' '
         done
@@ -153,7 +153,7 @@ function fn_demo_hsl216_comp_blocks()
                 fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
                 echo -n " "
             done
-            fn_sgr_set $SGR_ATTR_DEFAULT
+            fn_sgr_op $SGR_ATTR_DEFAULT
             fn_print_padding $_margin ' '
         done
         echo

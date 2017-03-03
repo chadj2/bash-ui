@@ -22,6 +22,8 @@ declare -r CSI_OP_COL_BACK='D'
 declare -r CSI_OP_COL_FORWARD='C'
 declare -r CSI_OP_GET_POSITION='6n'
 declare -r CSI_OP_SET_SCROLL='r'
+declare -r CSI_OP_SOFT_RESET='!p'
+declare -r CSI_OP_CLEAR_TABS='3g'
 declare -r CSI_OP_CURSOR_HIDE='?25l'
 declare -r CSI_OP_CURSOR_SHOW='?25h'
 declare -r CSI_OP_CURSOR_SAVE='?1048h'
@@ -37,21 +39,30 @@ declare -r CSI_KEY_PG_DOWN='6'
 declare -r CSI_KEY_HOME='H'
 declare -r CSI_KEY_END='F'
 declare -r CSI_KEY_ENTER='ENT'
+declare -r CSI_KEY_F9='20~'
+declare -r CSI_KEY_F12='24~'
 
 # This controls how long we wait for ESC codes to arrive.
 declare -r CSI_READ_ESC_TIMEOUT=1
 
+# execute a CSI command
 function fn_csi_op()
 {
     local _op=$1
     local _param=${2:-''}
 
     # Executre a CSI termial command
-    echo -en "\e[${_param}${_op}"
+    local _cmd="\e[${_param}${_op}"
+    fn_sgr_seq_write "$_cmd"
 }
+
 
 function fn_csi_read_key()
 {
+    # TODO: This function needs work before can be used in a generic way. 
+    #       because many keys and combinations are not supported. Who 
+    #       would think it should be so hard to get keyborad input?
+
     local -r _result_ref=$1
     local _timeout=${2:-''}
 
@@ -64,7 +75,7 @@ function fn_csi_read_key()
     # change IFS so newline can be read
     local IFS=
 
-    # read first character
+    # read first character with potentially no timeout.
     if ! read $_timeout_opt -s -r -N1 $_result_ref
     then
         printf -v $_result_ref '%s' "TIMEOUT"
@@ -87,11 +98,7 @@ function fn_csi_read_key()
     fi
 
     # read the rest of the ESC code
-    if ! fn_csi_read_esc $_result_ref
-    then
-        printf -v $_result_ref '%s' "ESC_FAILED"
-        return 1
-    fi
+    fn_csi_read_esc $_result_ref
 
     return 0
 }
@@ -100,14 +107,8 @@ fn_csi_read_esc()
 {
     local -r _result_ref=$1
 
-    # we add a slight delay to give bytes time to arrive
-
     # check for ESC
-    if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
-    then
-        return 1
-    fi
-
+    fn_csi_read_char $_result_ref
     if [ "${!_result_ref}" != '[' ]
     then
         return 1
@@ -115,11 +116,7 @@ fn_csi_read_esc()
 
     # If we have an escape char then we check for a 2 byte 
     # code like KEY_UP='[A'.
-    if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
-    then
-        return 1
-    fi
-
+    fn_csi_read_char $_result_ref
     if [[ "${!_result_ref}" == [[:alpha:]] ]]
     then
         # this is a 3 byte alpha code
@@ -142,20 +139,6 @@ function fn_csi_milli_wait()
     # we use read insted of sleep because it is a 
     # bash builtin and sleep would be too slow
     read -s -N0 -t$_animate_delay
-}
-
-function fn_csi_read_delim()
-{
-    local _result_ref=$1
-    local _delimiter=$2
-
-    if ! read -t$CSI_READ_ESC_TIMEOUT -s -d$_delimiter $_result_ref
-    then
-        echo "Failed to read ESC code within timeout."
-        exit 1
-    fi
-
-    return 0
 }
 
 function fn_csi_get_row_pos()
@@ -207,4 +190,37 @@ function fn_csi_scroll_region()
 
     # reset the scrolling bounds to default
     fn_csi_op $CSI_OP_SET_SCROLL
+}
+
+function fn_csi_read_delim()
+{
+    local _result_ref=$1
+    local _delimiter=$2
+
+    # change IFS so newline can be read
+    local IFS=
+
+    if ! read -t$CSI_READ_ESC_TIMEOUT -s -d$_delimiter $_result_ref
+    then
+        echo "Failed to read ESC code within timeout."
+        exit 1
+    fi
+
+    return 0
+}
+
+function fn_csi_read_char()
+{
+    local _result_ref=$1
+
+    # change IFS so newline can be read
+    local IFS=
+
+    if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
+    then
+        echo "Failed to read ESC code within timeout."
+        exit 1
+    fi
+
+    return 0
 }

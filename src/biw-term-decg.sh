@@ -13,12 +13,12 @@
 # Codes to print from the DEC graphics charset
 declare -r BIW_CHAR_DIAMOND=$'\x60'
 declare -r BIW_CHAR_BLOCK=$'\x61'
-declare -r BIW_CHAR_LINE_BR=$'\x6A'
-declare -r BIW_CHAR_LINE_BL=$'\x6D'
-declare -r BIW_CHAR_LINE_HORIZ=$'\x71'
-declare -r BIW_CHAR_LINE_BOTTOM_T=$'\x76'
-declare -r BIW_CHAR_LINE_TOP_T=$'\x77'
-declare -r BIW_CHAR_LINE_VERT=$'\x78'
+declare -r BIW_CHAR_LINE_BT_RT=$'\x6A'
+declare -r BIW_CHAR_LINE_BT_LT=$'\x6D'
+declare -r BIW_CHAR_LINE_HZ=$'\x71'
+declare -r BIW_CHAR_LINE_T_BT=$'\x76'
+declare -r BIW_CHAR_LINE_T_TOP=$'\x77'
+declare -r BIW_CHAR_LINE_VT=$'\x78'
 declare -r BIW_CHAR_BULLET=$'\x7E'
 
 declare -r SGI_GRAPHIC_START=$'\e(0'
@@ -50,7 +50,7 @@ function fn_utf8_print_h_line()
     local -i _line_width=$1
 
     local _sgr_line
-    local _pad_char=$BIW_CHAR_LINE_HORIZ
+    local _pad_char=$BIW_CHAR_LINE_HZ
     printf -v _sgr_line '%*s' $cred_canvas_width
     printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
 

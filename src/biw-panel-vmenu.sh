@@ -28,37 +28,38 @@ declare -i vmenu_idx_panel_top
 # last index in panel that has data
 declare -i vmenu_idx_panel_end
 
-# if non-zero then an indicator will show a row as being "checked".
-declare -i vmenu_idx_checked=-1
+# List of indicators displayed before the data.
+declare -a vmenu_ind_values
 
 # debug statistics only
 declare -i vmenu_idx_redraws=0
 
 function fn_vmenu_init()
 {
+    # get refrence to array with menu entries
+    vmenu_data_values=( "${!1:-$VMENU_EMPTY_TEXT}" )
+    local -i vmenu_data_size=${#vmenu_data_values[*]}
+
+    # set active index if passed as an argument. Else default to 0.
+    vmenu_idx_selected=${2:-0}
+
     # Geometry
     vmenu_height=$((BIW_PANEL_HEIGHT - HMENU_HEIGHT))
     vmenu_width=$BIW_PANEL_WIDTH
     vmenu_row_pos=$HMENU_HEIGHT
 
-    # get refrence to array with menu entries
-    vmenu_data_values=( "${!1-$VMENU_EMPTY_TEXT}" )
-    local -i vmenu_data_size=${#vmenu_data_values[*]}
-    vmenu_idx_last=$((vmenu_data_size - 1))
-
-    # set active index if passed as an argument. Else default to 0.
-    vmenu_idx_selected=${2:-0}
-    vmenu_idx_checked=-1
-
     # panel display area defaults to the start of the list. This 
     # be adjusted by redraw.
+    vmenu_idx_last=$((vmenu_data_size - 1))
     vmenu_idx_panel_top=0
+
+    vmenu_ind_values=()
 }
 
 fn_vmenu_actions()
 {
     local _key=$1
-    local _result=$BIW_ACT_IGNORED
+    local _result=$CTL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_UP)
@@ -115,7 +116,7 @@ function fn_vmenu_action_move()
     if ((vmenu_idx_selected == _new_idx))
     then
         # no change
-        return $BIW_ACT_IGNORED
+        return $CTL_ACT_IGNORED
     fi
 
     vmenu_idx_selected=$_new_idx
@@ -125,20 +126,20 @@ function fn_vmenu_action_move()
     then
         # moving selection within existing bounds
         fn_vmenu_move_selector $_relative_idx
-        return $BIW_ACT_CHANGED
+        return $CTL_ACT_CHANGED
     fi
 
     if((_relative_idx == -1 || _relative_idx == 1))
     then
         # use fast single row scroll
         fn_vmenu_fast_scroll $_relative_idx
-        return $BIW_ACT_CHANGED
+        return $CTL_ACT_CHANGED
     fi
 
     # redraw entire screen
     fn_vmenu_redraw
 
-    return $BIW_ACT_CHANGED
+    return $CTL_ACT_CHANGED
 }
 
 function fn_vmenu_fast_scroll()
@@ -239,7 +240,7 @@ function fn_vmenu_draw_row()
     fn_sgr_seq_flush
 
     # reset colors
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
 }
 
 function fn_menu_draw_indicator()
@@ -248,15 +249,11 @@ function fn_menu_draw_indicator()
     local _line_indicator
     local -i _line_indicator_size
 
-    if ((vmenu_idx_checked >= 0))
+    if [ ${#vmenu_ind_values[@]} != 0 ]
     then
         _line_indicator_size=1
-        _line_indicator=' '
-
-        if((_line_idx == vmenu_idx_checked))
-        then
-            fn_utf8_set _line_indicator $BIW_CHAR_DIAMOND
-        fi
+        _line_indicator="${vmenu_ind_values[_line_idx]:- }"
+        fn_utf8_set _line_indicator "$_line_indicator"
     else
         _line_indicator=$_line_idx
         _line_indicator_size=${#_line_indicator}
@@ -289,25 +286,25 @@ function fn_vmenu_draw_slider()
     local -i _line_idx=$1
 
     local _last_char
-    fn_utf8_set _last_char $BIW_CHAR_LINE_VERT
+    fn_utf8_set _last_char $BIW_CHAR_LINE_VT
 
     if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
         then
-            fn_utf8_set _last_char $BIW_CHAR_LINE_TOP_T
+            fn_utf8_set _last_char $BIW_CHAR_LINE_T_TOP
         else
-            _last_char='^'
+            fn_utf8_set _last_char $BIW_CHAR_TRIANGLE_UP
         fi
     elif ((_line_idx == vmenu_idx_panel_end))
     then
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            fn_utf8_set _last_char $BIW_CHAR_LINE_BOTTOM_T
+            fn_utf8_set _last_char $BIW_CHAR_LINE_T_BT
         else
-            _last_char='v'
+            fn_utf8_set _last_char $BIW_CHAR_TRIANGLE_DN
         fi
     fi
 

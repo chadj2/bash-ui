@@ -43,7 +43,7 @@ function fn_hmenu_init()
 fn_hmenu_actions()
 {
     local _key=$1
-    local _result=$BIW_ACT_IGNORED
+    local _result=$CTL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_LEFT)
@@ -84,7 +84,7 @@ function fn_hmenu_action_move()
     if((hmenu_idx_selected == _new_idx))
     then
         # no change
-        return $BIW_ACT_IGNORED
+        return $CTL_ACT_IGNORED
     fi
 
     hmenu_idx_selected=$_new_idx
@@ -93,7 +93,7 @@ function fn_hmenu_action_move()
     fn_hmenu_draw_item $((hmenu_idx_selected - _direction))
     fn_hmenu_draw_item $((hmenu_idx_selected))
     
-    return $BIW_ACT_CHANGED
+    return $CTL_ACT_CHANGED
 }
 
 function fn_hmenu_redraw()
@@ -116,9 +116,9 @@ function fn_hmenu_redraw()
     fn_sgr_seq_start
 
         fn_theme_set_attr $TATTR_BG_INACTIVE
-        fn_sgr_set $SGR_ATTR_UNDERLINE
+        fn_sgr_op $SGR_ATTR_UNDERLINE
         fn_sgr_print "$_r_pad"
-        fn_sgr_set $SGR_ATTR_DEFAULT
+        fn_sgr_op $SGR_ATTR_DEFAULT
     
     fn_sgr_seq_flush
 
@@ -146,9 +146,9 @@ function fn_hmenu_draw_item()
     fn_sgr_seq_start
 
         fn_theme_set_attr_default $((_item_idx == hmenu_idx_selected))
-        fn_sgr_set $SGR_ATTR_UNDERLINE
+        fn_sgr_op $SGR_ATTR_UNDERLINE
         fn_sgr_print "$_item_value"
-        fn_sgr_set $SGR_ATTR_DEFAULT
+        fn_sgr_op $SGR_ATTR_DEFAULT
 
     fn_sgr_seq_flush
 

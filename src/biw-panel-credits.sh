@@ -232,9 +232,11 @@ function fn_cred_print_line()
 
     # start main animation loop. 
     # Elements execute asynchronously.
-    while fn_biw_process_key '_result_char' $CRED_ANIMATE_DELAY
+    while fn_ctl_process_key '_result_char' $CRED_ANIMATE_DELAY
     do
         _terminate_loop=1
+
+        fn_sgr_seq_start
 
         # render sprites
         if((_text_active)); then
@@ -251,6 +253,9 @@ function fn_cred_print_line()
             if ! fn_cred_animate_cursor; then _cursor_active=0; fi
             _terminate_loop=0
         fi
+        
+        # this will flush the buffer and print the output
+        fn_sgr_seq_flush
 
         # apply logic to sprites
         if((!_cursor_active))
@@ -328,8 +333,6 @@ function fn_cred_print_alpha()
 
     fn_biw_set_col_pos $((_line_start + _alpha_start))
 
-    fn_sgr_seq_start
-
     local _char_val
     local -i _alpha_color
 
@@ -351,9 +354,6 @@ function fn_cred_print_alpha()
         # each value in the alpha list needs to get decremented
         cred_alpha_map[_alpha_idx]=$((_alpha_val - 1))
     done
-
-    # this will flush the buffer and print the output
-    fn_sgr_seq_flush
 
     return 0
 }
@@ -417,9 +417,10 @@ function fn_cred_blank_panel()
     for((_line_idx = 0; _line_idx < cred_height; _line_idx++))
     do
         local -i _row_pos=$((cred_row_pos + _line_idx))
+        fn_sgr_seq_start
+
         fn_biw_set_cursor_pos $_row_pos 0
 
-        fn_sgr_seq_start
         fn_theme_set_attr $TATTR_BG_INACTIVE
 
         if((_line_idx < cred_canvas_height))
@@ -436,15 +437,15 @@ function fn_cred_blank_line()
 {
     local _line_val=""
     fn_sgr_pad_string "_line_val" $cred_canvas_width
-    fn_utf8_print $BIW_CHAR_LINE_VERT
+    fn_utf8_print $BIW_CHAR_LINE_VT
     fn_sgr_print "$_line_val"
-    fn_utf8_print $BIW_CHAR_LINE_VERT
+    fn_utf8_print $BIW_CHAR_LINE_VT
 }
 
 function fn_cred_bottom_line()
 {
     # draw bottom box
-    fn_utf8_print $BIW_CHAR_LINE_BL
+    fn_utf8_print $BIW_CHAR_LINE_BT_LT
     fn_utf8_print_h_line $cred_canvas_width
-    fn_utf8_print $BIW_CHAR_LINE_BR
+    fn_utf8_print $BIW_CHAR_LINE_BT_RT
 }

@@ -13,13 +13,13 @@ function fn_biw_setup_bind()
 {
     local -r _bind_key=$1
 
-    # We use 2 binds here because of an issue bash has with 
-    # multi-char escape sequences.
-    local -r bind_int_char=$'"\201"'
-    local -r bind_esc_char="\"\e[${_bind_key}\""
+    # We use a random character for an intermediate bind because 
+    # bash has issues with multi-byte ESC sequences.
+    local -r bind_int_char=$'\201'
+    local -r bind_esc_char="\e[${_bind_key}"
 
-    bind -x ${bind_int_char}:fn_biw_setup_show
-    bind ${bind_esc_char}:${bind_int_char}
+    bind -x "\"${bind_int_char}\":fn_biw_setup_show"
+    bind "\"${bind_esc_char}\":\"${bind_int_char}\""
 }
 
 function fn_biw_setup_show()
@@ -29,7 +29,7 @@ function fn_biw_setup_show()
         return 1
     fi
 
-    READLINE_LINE=$(cat $BIW_CH_RES_FILE)
+    READLINE_LINE="${READLINE_LINE}$(cat $BIW_CH_RES_FILE)"
     READLINE_POINT=${#READLINE_LINE}
 
     rm $BIW_CH_RES_FILE
@@ -71,5 +71,9 @@ then
     return 1
 fi
 
-# set bind key here
+# Uncomment below lines to add bind keys
+
 fn_biw_setup_bind $CSI_KEY_DOWN
+#fn_biw_setup_bind $CSI_KEY_END
+#fn_biw_setup_bind $CSI_KEY_F9
+#fn_biw_setup_bind $CSI_KEY_F12

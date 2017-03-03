@@ -24,7 +24,7 @@ function fn_rgb16_demo()
             fn_sgr_color16_set $((SGR_ATTR_BG + _light*SGR_ATTR_BRIGHT)) $_color || exit 1
             echo -n " "
         done
-        fn_sgr_set $SGR_ATTR_DEFAULT
+        fn_sgr_op $SGR_ATTR_DEFAULT
         echo
     done
     echo
@@ -42,7 +42,7 @@ function fn_grey26_demo()
         echo -n " "
     done
 
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
     echo
     echo
 }
@@ -56,7 +56,7 @@ function fn_rgb216_grad_demo()
         fn_sgr_rgb216_set $SGR_ATTR_BG $_red 0 0 || exit 1
         echo -n " "
     done
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
     echo
 
     for _green in {0..5}
@@ -64,7 +64,7 @@ function fn_rgb216_grad_demo()
         fn_sgr_rgb216_set $SGR_ATTR_BG 0 $_green 0 || exit 1
         echo -n " "
     done
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
     echo
 
     for _blue in {0..5}
@@ -72,7 +72,7 @@ function fn_rgb216_grad_demo()
         fn_sgr_rgb216_set $SGR_ATTR_BG 0 0 $_blue || exit 1
         echo -n " "
     done
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
     echo
 
     for _grey in {0..5}
@@ -80,7 +80,7 @@ function fn_rgb216_grad_demo()
         fn_sgr_rgb216_set $SGR_ATTR_BG $_grey $_grey $_grey || exit 1
         echo -n " "
     done
-    fn_sgr_set $SGR_ATTR_DEFAULT
+    fn_sgr_op $SGR_ATTR_DEFAULT
     echo
 
     echo
@@ -101,7 +101,7 @@ function fn_rgb216_grid_demo()
                 echo -n " "
             done
         done
-        fn_sgr_set $SGR_ATTR_DEFAULT
+        fn_sgr_op $SGR_ATTR_DEFAULT
         echo
     done
     echo
