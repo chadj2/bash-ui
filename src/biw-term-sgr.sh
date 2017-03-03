@@ -30,20 +30,6 @@ declare -ri  SGR_COL_CYAN=6
 declare -ri  SGR_COL_WHITE=7
 declare -ri  SGR_COL_DEFAULT=9
 
-# Codes to print from the DEC graphics charset
-declare -ri SGI_CHAR_LINE_VERT=170
-declare -ri SGI_CHAR_LINE_HORIZ=161
-declare -ri SGI_CHAR_LINE_TOP_T=167
-declare -ri SGI_CHAR_LINE_BOTTOM_T=166
-declare -ri SGI_CHAR_LINE_BL=155
-declare -ri SGI_CHAR_LINE_BR=152
-declare -ri SGI_CHAR_BLOCK=141
-declare -ri SGI_CHAR_BULLET=176
-declare -ri SGI_CHAR_DIAMOND=140
-
-declare -r SGI_GRAPHIC_START=$'\e(0'
-declare -r SGI_GRAPHIC_END=$'\e(B'
-
 # used for buffering of SGR commands
 declare -i sgr_buffer_active=0
 declare -a sgr_buffer_data
@@ -110,26 +96,6 @@ function fn_sgr_seq_flush()
     sgr_buffer_active=0
 }
 
-function fn_sgr_graphic_set()
-{
-    local _result_ref=$1
-    local -i _octal_num=$2
-
-    printf -v $_result_ref '%b' \
-        $SGI_GRAPHIC_START \
-        "\\$_octal_num" \
-        $SGI_GRAPHIC_END
-}
-
-function fn_sgr_graphic_print()
-{
-    local -i _octal_num=$1
-    local _out
-
-    fn_sgr_graphic_set _out $_octal_num
-    fn_sgr_print "$_out"
-}
-
 function fn_sgr_pad_string()
 {
     local _result_ref=$1
@@ -137,20 +103,6 @@ function fn_sgr_pad_string()
 
     printf -v $_result_ref "%-${_pad_width}s" "${!_result_ref}"
     printf -v $_result_ref '%s' "${!_result_ref:0:${_pad_width}}"
-}
-
-function fn_sgr_print_h_line()
-{
-    local -i _line_width=$1
-
-    local _sgr_line
-    local _pad_char="\\$SGI_CHAR_LINE_HORIZ"
-    printf -v _sgr_line '%*s' $cred_canvas_width
-    printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
-
-    fn_sgr_print $SGI_GRAPHIC_START
-    fn_sgr_print $_sgr_line
-    fn_sgr_print $SGI_GRAPHIC_END
 }
 
 # Simple color space (8x2)

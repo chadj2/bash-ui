@@ -15,6 +15,8 @@ set -o nounset
 
 source ${BIW_HOME}/biw-term-csi.sh
 source ${BIW_HOME}/biw-term-sgr.sh
+#source ${BIW_HOME}/biw-term-decg.sh
+source ${BIW_HOME}/biw-term-utf8.sh
 source ${BIW_HOME}/biw-term-hsl.sh
 source ${BIW_HOME}/biw-theme.sh
 source ${BIW_HOME}/biw-panel-vmenu.sh
@@ -24,7 +26,7 @@ source ${BIW_HOME}/biw-panel-credits.sh
 declare -r BIW_VERSION=0.9
 
 # debug only
-declare -i BIW_DEBUG_ENABLE=1
+declare -i BIW_DEBUG_ENABLE=0
 declare -i BIW_DEBUG_SEQ=0
 declare BIW_DEBUG_MSG=''
 

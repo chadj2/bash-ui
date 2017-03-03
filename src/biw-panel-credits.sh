@@ -436,15 +436,15 @@ function fn_cred_blank_line()
 {
     local _line_val=""
     fn_sgr_pad_string "_line_val" $cred_canvas_width
-    fn_sgr_graphic_print $SGI_CHAR_LINE_VERT
+    fn_utf8_print $BIW_CHAR_LINE_VERT
     fn_sgr_print "$_line_val"
-    fn_sgr_graphic_print $SGI_CHAR_LINE_VERT
+    fn_utf8_print $BIW_CHAR_LINE_VERT
 }
 
 function fn_cred_bottom_line()
 {
     # draw bottom box
-    fn_sgr_graphic_print $SGI_CHAR_LINE_BL
-    fn_sgr_print_h_line $cred_canvas_width
-    fn_sgr_graphic_print $SGI_CHAR_LINE_BR
+    fn_utf8_print $BIW_CHAR_LINE_BL
+    fn_utf8_print_h_line $cred_canvas_width
+    fn_utf8_print $BIW_CHAR_LINE_BR
 }

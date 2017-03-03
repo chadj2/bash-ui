@@ -255,7 +255,7 @@ function fn_menu_draw_indicator()
 
         if((_line_idx == vmenu_idx_checked))
         then
-            fn_sgr_graphic_set _line_indicator $SGI_CHAR_DIAMOND
+            fn_utf8_set _line_indicator $BIW_CHAR_DIAMOND
         fi
     else
         _line_indicator=$_line_idx
@@ -289,14 +289,14 @@ function fn_vmenu_draw_slider()
     local -i _line_idx=$1
 
     local _last_char
-    fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_VERT
+    fn_utf8_set _last_char $BIW_CHAR_LINE_VERT
 
     if ((_line_idx == vmenu_idx_panel_top))
     then
         # Top charachter
         if ((_line_idx == 0))
         then
-            fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_TOP_T
+            fn_utf8_set _last_char $BIW_CHAR_LINE_TOP_T
         else
             _last_char='^'
         fi
@@ -305,7 +305,7 @@ function fn_vmenu_draw_slider()
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            fn_sgr_graphic_set _last_char $SGI_CHAR_LINE_BOTTOM_T
+            fn_utf8_set _last_char $BIW_CHAR_LINE_BOTTOM_T
         else
             _last_char='v'
         fi
