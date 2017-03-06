@@ -29,10 +29,17 @@ function fn_biw_setup_show()
         return 1
     fi
 
+    if [ ! -r $BIW_CH_RES_FILE ]
+    then
+        return 1
+    fi
+
     READLINE_LINE="${READLINE_LINE}$(cat $BIW_CH_RES_FILE)"
     READLINE_POINT=${#READLINE_LINE}
 
     rm $BIW_CH_RES_FILE
+
+    return 0
 }
 
 function fn_biw_setup_env()

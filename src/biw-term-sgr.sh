@@ -132,9 +132,34 @@ function fn_sgr_color16_set()
 function fn_sgr_color216_set()
 {
     local -i _sgr_attr=$1
-    local -i _sgr_code=$2
+    local -i _sgr_color=$2
+
     local -i _sgr_op=$((_sgr_attr + 8))
+    local -i _sgr_code=$((_sgr_color + 16))
     fn_sgr_op "${_sgr_op};5;${_sgr_code}"
+}
+
+# Greyscale color space (26)
+# Parameters)
+#   2) Light [0-25]: luminosity
+function fn_sgr_grey26_get()
+{
+    local -i _light=$1
+
+    local -i _sgr_code
+    case $_light in
+        0)
+            _sgr_code=0
+            ;;
+        25)
+            _sgr_code=215
+            ;;
+        *)
+            _sgr_code=$((215 + _light))
+            ;;
+    esac
+
+    return $_sgr_code
 }
 
 # Greyscale color space (26)
@@ -146,19 +171,8 @@ function fn_sgr_grey26_set()
     local -i _mode=$1
     local -i _light=$2
 
-    local -i _sgr_code
-
-    case $_light in
-        0)
-            _sgr_code=$((16))
-            ;;
-        25)
-            _sgr_code=$((16 + 215))
-            ;;
-        *)
-            _sgr_code=$((16 + 215 + _light))
-            ;;
-    esac
+    fn_sgr_grey26_get $_light
+    local -i _sgr_code=$?
 
     fn_sgr_color216_set $_mode $_sgr_code
 }
@@ -170,7 +184,7 @@ function fn_sgr_color216_get()
     local -i _green=$2
     local -i _blue=$3
 
-    local -i _sgr_code=$((36*$_red + 6*$_green + $_blue + 16))
+    local -i _sgr_code=$((36*$_red + 6*$_green + $_blue))
     return $_sgr_code
 }
 

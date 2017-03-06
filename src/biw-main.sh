@@ -218,9 +218,12 @@ function fn_biw_panic()
     local _fail_line=${BASH_LINENO[0]}
     local _command=$BASH_COMMAND
 
+    # flush any commands in the buffer
+    fn_sgr_seq_flush
+
     # show and restore cursor
-    fn_csi_op $CSI_OP_CURSOR_SHOW
     fn_csi_op $CSI_OP_CURSOR_RESTORE
+    fn_csi_op $CSI_OP_CURSOR_SHOW
 
     echo
     echo "PANIC Failure at (${_fail_func}:${_fail_line}):"

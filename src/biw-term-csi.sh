@@ -202,7 +202,7 @@ function fn_csi_read_delim()
 
     if ! read -t$CSI_READ_ESC_TIMEOUT -s -d$_delimiter $_result_ref
     then
-        echo "Failed to read ESC code within timeout."
+        echo "Failed to read delimiter <$_delimiter> within timeout."
         exit 1
     fi
 

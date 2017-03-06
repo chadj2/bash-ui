@@ -115,7 +115,7 @@ function fn_hmenu_redraw()
 
     fn_sgr_seq_start
 
-        fn_theme_set_attr $TATTR_BG_INACTIVE
+        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
         fn_sgr_op $SGR_ATTR_UNDERLINE
         fn_sgr_print "$_r_pad"
         fn_sgr_op $SGR_ATTR_DEFAULT

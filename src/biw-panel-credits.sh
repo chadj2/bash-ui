@@ -407,7 +407,7 @@ function fn_cred_canvas_set_cursor()
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
 
-    fn_theme_set_attr $TATTR_BG_INACTIVE
+    fn_theme_set_attr $THEME_SET_DEF_INACTIVE
 }
 
 function fn_cred_blank_panel()
@@ -421,7 +421,7 @@ function fn_cred_blank_panel()
 
         fn_biw_set_cursor_pos $_row_pos 0
 
-        fn_theme_set_attr $TATTR_BG_INACTIVE
+        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
 
         if((_line_idx < cred_canvas_height))
         then
