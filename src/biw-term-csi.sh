@@ -20,6 +20,8 @@ declare -r CSI_OP_ROW_ERASE='K'
 declare -r CSI_OP_COL_POS='G'
 declare -r CSI_OP_COL_BACK='D'
 declare -r CSI_OP_COL_FORWARD='C'
+declare -r CSI_OP_COL_INSERT='@'
+declare -r CSI_OP_COL_ERASE='X'
 declare -r CSI_OP_GET_POSITION='6n'
 declare -r CSI_OP_SET_SCROLL='r'
 declare -r CSI_OP_SOFT_RESET='!p'
@@ -180,6 +182,9 @@ function fn_csi_scroll_region()
 
     # set the scrolling bounds
     fn_csi_op $CSI_OP_SET_SCROLL "${_abs_top};${_abs_bottom}"
+
+    # Set default attributes because this affects the fill color
+    fn_sgr_op $SGR_ATTR_DEFAULT
 
     if((_direction > 0))
     then

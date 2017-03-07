@@ -29,14 +29,14 @@ declare -i hmenu_idx_redraws=0
 
 function fn_hmenu_init()
 {
+    hmenu_data_values=("${!1}")
+    hmenu_data_size=${#hmenu_data_values[*]}
+
     # Layout
     hmenu_width=$BIW_PANEL_WIDTH
     hmenu_row_pos=0
     
     hmenu_idx_selected=0
-    hmenu_data_values=("History" "Completions")
-    hmenu_data_values=("${!1}")
-    hmenu_data_size=${#hmenu_data_values[*]}
     hmenu_idx_last=$((hmenu_data_size - 1))
 }
 
@@ -62,13 +62,14 @@ fn_hmenu_actions()
 function fn_hmenu_get_current_val()
 {
     local _result_ref=$1
-    printf -v $_result_ref '%s' "${hmenu_data_values[hmenu_idx_selected]}"
+    local _current_val="${hmenu_data_values[hmenu_idx_selected]}"
+
+    printf -v $_result_ref '%s' "$_current_val"
 }
 
 function fn_hmenu_action_move()
 {
     local _direction=$1
-
     local _new_idx=$((hmenu_idx_selected + _direction))
 
     if((_new_idx <= 0))
@@ -109,17 +110,11 @@ function fn_hmenu_redraw()
         ((_total_width += _print_width))
     done
 
-    # fill remaining line
-    local _r_pad=" "
-    fn_sgr_pad_string "_r_pad" $((hmenu_width - _total_width))
-
+    # Fill the reset of the line
     fn_sgr_seq_start
-
-        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
-        fn_sgr_op $SGR_ATTR_UNDERLINE
-        fn_sgr_print "$_r_pad"
-        fn_sgr_op $SGR_ATTR_DEFAULT
-    
+    fn_theme_set_attr $THEME_SET_DEF_INACTIVE
+    fn_sgr_op $SGR_ATTR_UNDERLINE
+    fn_sgr_print_pad '' $((hmenu_width - _total_width))
     fn_sgr_seq_flush
 
     ((hmenu_idx_redraws++))
@@ -129,26 +124,22 @@ function fn_hmenu_draw_item()
 {
     local -i _item_idx=$1
     local _item_value=${hmenu_data_values[_item_idx]}
-    local -i _print_width=$((HMENU_ITEM_WIDTH - 2))
-
-    fn_sgr_pad_string "_item_value" $_print_width
-
-    if ((_item_idx == hmenu_idx_selected))
-    then
-        _item_value="[${_item_value}]"
-    else
-        _item_value=" ${_item_value} "
-    fi
-
-    local -i _col_pos=$((_item_idx*HMENU_ITEM_WIDTH))
-    fn_biw_set_cursor_pos $hmenu_row_pos $_col_pos
 
     fn_sgr_seq_start
 
-        fn_theme_set_attr_default $((_item_idx == hmenu_idx_selected))
-        fn_sgr_op $SGR_ATTR_UNDERLINE
-        fn_sgr_print "$_item_value"
-        fn_sgr_op $SGR_ATTR_DEFAULT
+    fn_biw_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
+    fn_theme_set_attr_panel $((_item_idx == hmenu_idx_selected))
+    fn_sgr_op $SGR_ATTR_UNDERLINE
+
+    if ((_item_idx == hmenu_idx_selected))
+    then
+        fn_sgr_print '['
+        fn_sgr_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 2))
+        fn_sgr_print ']'
+    else
+        fn_sgr_print ' '
+        fn_sgr_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 1))
+    fi
 
     fn_sgr_seq_flush
 

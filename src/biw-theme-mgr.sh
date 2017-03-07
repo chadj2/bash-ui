@@ -5,9 +5,11 @@
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-theme.sh
+# File:         biw-theme-mgr.sh
 # Description:  Manage SGR attributes based on display themes.
 ##
+
+source ${BIW_HOME}/biw-term-hsl.sh
 
 # Theme description
 declare -r THEME_CFG_DESC=1
@@ -31,107 +33,17 @@ declare -r THEME_CFG_SLI_ATTR=41
 declare -r THEME_CFG_SLA_COLOR=50
 declare -r THEME_CFG_SLA_ATTR=51
 
-# There are 3 color spaces that can be used:
-#   color16) 8 dark and 8 light colors (SGR_COL*)
-#   HSL216) Hue/Saturation/Light (36x6x6) color space.
-#   grey26) 26 shades of Grey. Much more than is offered by HSL.
+# Base for HSL colors
+declare -ri THEME_CFG_HSL_BASE=100
+declare -ri THEME_ATTR_INVERT=$((THEME_CFG_HSL_BASE + 1))
 
-declare -ra THEME_TYPE_BRIGHT=(
-    [$THEME_CFG_DESC]="Bright"
-    [$THEME_CFG_BG_COLOR]=$SGR_COL_BLACK
-    [$THEME_CFG_DEF_COLOR]=$((SGR_COL_BLUE + SGR_ATTR_BRIGHT))
-    [$THEME_CFG_SEL_COLOR]=$((SGR_COL_RED + SGR_ATTR_BRIGHT))
-    [$THEME_CFG_SLI_COLOR]=$((SGR_COL_CYAN + SGR_ATTR_BRIGHT))
-    [$THEME_CFG_SLA_COLOR]=$((SGR_COL_CYAN + SGR_ATTR_BRIGHT))
-    [$THEME_CFG_DEF_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLA_ATTR]=0
-)
-
-declare -ra THEME_TYPE_BRIGHT_216=(
-    [$THEME_CFG_DESC]='Bright (HSL 216)'
-    [$THEME_CFG_BG_COLOR]=$SGR_COL_BLACK
-    [$THEME_CFG_DEF_COLOR]="HSL216 $((HSL216_HUE_BLUE - 4)) 3 4"
-    [$THEME_CFG_SEL_COLOR]="HSL216 $((HSL216_HUE_BLUE - 4)) 2 5"
-    [$THEME_CFG_SLI_COLOR]="HSL216 $((HSL216_HUE_RED + 3)) 1 3"
-    [$THEME_CFG_SLA_COLOR]="HSL216 $((HSL216_HUE_RED + 3)) 1 5"
-    [$THEME_CFG_DEF_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLA_ATTR]=$SGR_ATTR_INVERT
-)
-
-declare -ra THEME_TYPE_DARK=(
-    [$THEME_CFG_DESC]='Dark'
-    [$THEME_CFG_BG_COLOR]=$SGR_COL_BLACK
-    [$THEME_CFG_DEF_COLOR]=$SGR_COL_WHITE
-    [$THEME_CFG_SEL_COLOR]=$SGR_COL_RED
-    [$THEME_CFG_SLI_COLOR]=$SGR_COL_WHITE
-    [$THEME_CFG_SLA_COLOR]=$SGR_COL_WHITE
-    [$THEME_CFG_DEF_ATTR]=0
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLA_ATTR]=0
-)
-
-declare -ra THEME_TYPE_MONO=(
-    [$THEME_CFG_DESC]='Monochrome'
-    [$THEME_CFG_BG_COLOR]=$SGR_COL_DEFAULT
-    [$THEME_CFG_DEF_COLOR]=$SGR_COL_DEFAULT
-    [$THEME_CFG_SEL_COLOR]=$SGR_COL_DEFAULT
-    [$THEME_CFG_SLI_COLOR]=$SGR_COL_DEFAULT
-    [$THEME_CFG_SLA_COLOR]=$SGR_COL_DEFAULT
-    [$THEME_CFG_DEF_ATTR]=0
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=0
-    [$THEME_CFG_SLA_ATTR]=$SGR_ATTR_INVERT
-)
-
-declare -ra THEME_TYPE_MATRIX=(
-    [$THEME_CFG_DESC]='Matrix (HSL 216)'
-    [$THEME_CFG_BG_COLOR]="G26 2"
-    [$THEME_CFG_DEF_COLOR]="HSL216 $((HSL216_HUE_GREEN)) 2 5"
-    [$THEME_CFG_SEL_COLOR]="HSL216 $((HSL216_HUE_GREEN)) 4 4"
-    [$THEME_CFG_SLI_COLOR]="HSL216 $((HSL216_HUE_GREEN)) 2 5"
-    [$THEME_CFG_SLA_COLOR]="HSL216 $((HSL216_HUE_GREEN)) 4 4"
-    [$THEME_CFG_DEF_ATTR]=0
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=0
-    [$THEME_CFG_SLA_ATTR]=$SGR_ATTR_INVERT
-)
-
-declare -ra THEME_TYPE_IMPACT=(
-    [$THEME_CFG_DESC]='Impact (HSL 216)'
-    [$THEME_CFG_BG_COLOR]="G26 2"
-    [$THEME_CFG_DEF_COLOR]="HSL216 $((HSL216_HUE_YELLOW)) 3 5"
-    [$THEME_CFG_SEL_COLOR]="HSL216 $((HSL216_HUE_BLUE - 3)) 3 5"
-    [$THEME_CFG_SLI_COLOR]="HSL216 $((HSL216_HUE_RED + 3)) 3 3"
-    [$THEME_CFG_SLA_COLOR]="HSL216 $((HSL216_HUE_RED + 3)) 1 5"
-    [$THEME_CFG_DEF_ATTR]=0
-    [$THEME_CFG_SEL_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLI_ATTR]=$SGR_ATTR_INVERT
-    [$THEME_CFG_SLA_ATTR]=$SGR_ATTR_INVERT
-)
-
-# make a list of all the themes
-declare -ra THEME_LIST=(
-    THEME_TYPE_BRIGHT
-    THEME_TYPE_BRIGHT_216
-    THEME_TYPE_DARK
-    THEME_TYPE_MONO
-    THEME_TYPE_MATRIX
-    THEME_TYPE_IMPACT
-)
+source ${BIW_HOME}/biw-themes.sh
 
 # Options for setting theme attributes
 declare -ri THEME_SET_DEF_INACTIVE=20
 declare -ri THEME_SET_DEF_ACTIVE=30
 declare -ri THEME_SET_SLI_INACTIVE=40
 declare -ri THEME_SET_SLI_ACTIVE=50
-
-# Base for HSL colors
-declare -ri THEME_CFG_HSL_BASE=100
 
 # file for persisting theme
 declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
@@ -234,7 +146,7 @@ function fn_theme_parse_color()
     elif((_color_params_size == 2))
     then
         # this is a greyscale-26 color
-        if [ "${_color_params[0]}" != "G26" ]
+        if [ "${_color_params[0]}" != 'G26' ]
         then
             echo "ERROR: Expected G26 params for ${_theme_name}: ${_color_params[@]}"
             exit 1
@@ -247,7 +159,7 @@ function fn_theme_parse_color()
 
     elif((_color_params_size == 4))
     then
-        if [ ${_color_params[0]} != "HSL216" ]
+        if [ ${_color_params[0]} != 'HSL216' ]
         then
             echo "ERROR: Expected HSL params for ${_theme_name}: ${_color_params[@]}"
             exit 1
@@ -279,8 +191,8 @@ fn_theme_save()
 fn_theme_idx_from_name()
 {
     local -r _theme_name=$1
-
     local -i _theme_idx
+
     for _theme_idx in ${!THEME_LIST[@]}
     do
         if [ ${THEME_LIST[$_theme_idx]} == $_theme_name ]
@@ -308,9 +220,10 @@ function fn_theme_set_desc_list()
     done
 }
 
-function fn_theme_set_attr_default()
+function fn_theme_set_attr_panel()
 {
     local -i _is_active=$1
+
     if ((_is_active == 0))
     then
         fn_theme_set_attr $THEME_SET_DEF_INACTIVE
@@ -322,6 +235,7 @@ function fn_theme_set_attr_default()
 function fn_theme_set_attr_slider()
 {
     local -i _is_active=$1
+
     if ((_is_active == 0))
     then
         fn_theme_set_attr $THEME_SET_SLI_INACTIVE
@@ -334,9 +248,6 @@ function fn_theme_set_attr()
 {
     local -i _set_name=$1
 
-    local -i _bg_color=${theme_active_data[THEME_CFG_BG_COLOR]}
-    local -i _fg_color=${theme_active_data[_set_name]}
-    local -i _attr=${theme_active_data[_set_name + 1]}
 
     # handle nested sgr transaction
     local -i _bg_sgr_nested=$((!sgr_buffer_active))
@@ -346,13 +257,23 @@ function fn_theme_set_attr()
     fi
 
     fn_sgr_op $SGR_ATTR_DEFAULT
-    fn_theme_set_color $SGR_ATTR_BG $_bg_color
-    fn_theme_set_color $SGR_ATTR_FG $_fg_color
 
-    if((_attr > 0))
+    local -i _bg_color=${theme_active_data[THEME_CFG_BG_COLOR]}
+    local -i _fg_color=${theme_active_data[_set_name]}
+    local -i _attr=${theme_active_data[_set_name + 1]}
+    
+    if((_attr == THEME_ATTR_INVERT))
+    then
+        local -i _temp=$_bg_color
+        _bg_color=$_fg_color
+        _fg_color=$_temp
+    elif((_attr == SGR_ATTR_INVERT))
     then
         fn_sgr_op $_attr
     fi
+
+    fn_theme_set_color $SGR_ATTR_BG $_bg_color
+    fn_theme_set_color $SGR_ATTR_FG $_fg_color
 
     # handle nested sgr transaction
     if((_bg_sgr_nested))

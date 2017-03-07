@@ -86,6 +86,7 @@ EOM
 function fn_cred_set_color()
 {
     local -i _sgr_color=$1
+
     if((cred_color_use_216))
     then
         fn_sgr_color216_set $SGR_ATTR_FG $_sgr_color
@@ -118,7 +119,6 @@ function fn_color_map_hsl_hue()
     local -ir _hsl_sat=4
     local -ir _hsl_light=5
     local -ir _color_repeat=2
-
     local -i _hsl_hue
     local -i _sgr_code
     local -i _map_idx=0
@@ -147,7 +147,6 @@ function fn_color_map_hsl_saturation()
     local -ir _min_hsl_hue=-5
     local -ir _hsl_hue=12
     local -ir _hsl_light=5
-
     local -i _hsl_sat
     local -i _sgr_code
     local -i _map_idx=0
@@ -200,7 +199,6 @@ function fn_cred_print_line()
 {
     local _line_val=$1
     local -i _persist_cursor=$2
-
     local -i _line_width=${#_line_val}
 
     if((_line_width == 0))
@@ -224,9 +222,7 @@ function fn_cred_print_line()
     # sprite indicators
     local -i _text_active=1
     local -i _text_idx=0
-
     local -i _alpha_active=1
-
     local -i _cursor_active=0
     local -i _cursor_counter=$CRED_CURSOR_MAX
 
@@ -307,8 +303,7 @@ function fn_cred_animate_text()
 
 function fn_cred_print_alpha()
 {
-    local -i _line_width=${#_line_val}
-
+    local -ir _line_width=${#_line_val}
     local -i _alpha_idx
     local -i _alpha_val
     local -i _alpha_start=-1
@@ -390,10 +385,10 @@ function fn_cred_print_cursor()
     local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
     fn_cred_set_color $_sgr_color
 
-    local _sgr_char=" "
+    local _sgr_char=' '
     if((_should_show))
     then
-        _sgr_char="_"
+        _sgr_char='_'
     fi
 
     fn_sgr_print "$_sgr_char"
@@ -403,6 +398,7 @@ function fn_cred_canvas_set_cursor()
 {
     local -i _row_pos=$1
     local -i _col_pos=$2
+
     fn_biw_set_cursor_pos \
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
@@ -420,7 +416,6 @@ function fn_cred_blank_panel()
         fn_sgr_seq_start
 
         fn_biw_set_cursor_pos $_row_pos 0
-
         fn_theme_set_attr $THEME_SET_DEF_INACTIVE
 
         if((_line_idx < cred_canvas_height))
@@ -435,16 +430,14 @@ function fn_cred_blank_panel()
 
 function fn_cred_blank_line()
 {
-    local _line_val=""
-    fn_sgr_pad_string "_line_val" $cred_canvas_width
     fn_utf8_print $BIW_CHAR_LINE_VT
-    fn_sgr_print "$_line_val"
+    fn_csi_print_width '' $cred_canvas_width
+    fn_biw_set_col_pos $((cred_width - 1))
     fn_utf8_print $BIW_CHAR_LINE_VT
 }
 
 function fn_cred_bottom_line()
 {
-    # draw bottom box
     fn_utf8_print $BIW_CHAR_LINE_BT_LT
     fn_utf8_print_h_line $cred_canvas_width
     fn_utf8_print $BIW_CHAR_LINE_BT_RT

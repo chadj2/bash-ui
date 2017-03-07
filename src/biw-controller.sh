@@ -7,8 +7,10 @@
 # reserved. See LICENSE.
 #
 # File:         biw-controller.sh
-# Description:  Controller functions for panels
+# Description:  Controller functions for vmenu panels
 ##
+
+source ${BIW_HOME}/biw-panel-vmenu.sh
 
 # returned by actions to indicate if the menu contents changed. 
 declare -ri CTL_ACT_IGNORED=1
@@ -196,6 +198,13 @@ function fn_ctl_browse_select()
         return 1
     fi
 
+    if [ ! -x "$_selected_file" ]
+    then    
+        fn_vmenu_set_message "ERROR: Directory permission denied."
+        fn_vmenu_redraw
+        return 0
+    fi
+
 	# change real directories
     cd "$_selected_file" || exit 1
 
@@ -226,14 +235,19 @@ function fn_ctl_browse_update()
     do
         _file=${_ls_output[_file_idx]}
 
-        if [ "$_file" == '../' ]
+        if [[ "$_file" =~ ^(.*)/$ ]]
         then
             _dir_list+=( "$_file" )
-            _dir_list_ind+=( $BIW_CHAR_TRIANGLE_LT )
-        elif [[ "$_file" =~ ^(.*)/$ ]]
-        then
-            _dir_list+=( "$_file" )
-            _dir_list_ind+=( $BIW_CHAR_TRIANGLE_RT )
+
+            if [ ! -x "$_file" ]
+            then
+                _dir_list_ind+=( $BIW_CHAR_DBL_EXCL )
+            elif [ "$_file" == '../' ]
+            then
+                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_LT )
+            else 
+                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_RT )
+            fi
         else
             _file_list+=( "$_file" )
             _file_list_ind+=( $BIW_CHAR_BULLET )
@@ -247,15 +261,19 @@ function fn_ctl_browse_update()
         _dir_view+=( "${_file_list[@]}" )
     fi
 
+    local _rel_dir
+    fn_ctl_get_relpath '_rel_dir' "$CTL_ORIG_PWD" "$PWD"
+
     fn_vmenu_init _dir_view[@]
     vmenu_ind_values=( "${_dir_list_ind[@]}" "${_file_list_ind[@]:-}" )
-
+    fn_vmenu_set_message "PWD [${_rel_dir}]"
+    
     fn_vmenu_redraw
 }
 
 # Return relative path from canonical absolute dir path $1 to canonical
 # absolute dir path $2 ($1 and/or $2 may end with one or no "/").
-# Does only need POSIX shell builtins (no external command)
+# Only needs need POSIX shell builtins (no external command)
 # source: http://stackoverflow.com/a/18898782/4316647
 function fn_ctl_get_relpath() 
 {

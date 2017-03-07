@@ -38,20 +38,39 @@ declare -a sgr_buffer_data
 function fn_sgr_op()
 {
     local _param=$1
-
     local _cmd="\e[${_param}m"
+
     fn_sgr_seq_write "$_cmd"
 }
 
-# Optionally save output to an array buffer.
+# output an escaped text
 function fn_sgr_print()
 {
     local _out="$1"
 
     # escape slashes
     _out="${_out//\\/\\\\}"
-
     fn_sgr_seq_write "$_out"
+}
+
+function fn_sgr_print_pad()
+{
+    local _pad_str=$1
+    local -i _pad_width=$2
+
+    printf -v _pad_str "%-${_pad_width}s" "$_pad_str"
+    printf -v _pad_str '%s' "${_pad_str:0:${_pad_width}}"
+    fn_sgr_print "$_pad_str"
+}
+
+function fn_csi_print_width()
+{
+    local _out="$1"
+    local -i _line_width=$2
+    local -i _out_size=${#_out}
+
+    fn_sgr_print "$_out"
+    fn_csi_op $CSI_OP_COL_ERASE $((_line_width - _out_size))
 }
 
 # output data to the buffer
@@ -102,15 +121,6 @@ function fn_sgr_seq_flush()
     sgr_buffer_active=0
 }
 
-function fn_sgr_pad_string()
-{
-    local _result_ref=$1
-    local -i _pad_width=$2
-
-    printf -v $_result_ref "%-${_pad_width}s" "${!_result_ref}"
-    printf -v $_result_ref '%s' "${!_result_ref:0:${_pad_width}}"
-}
-
 # Simple color space (8x2)
 # Parameters)
 #   1) Mode [SGR_ATTR_FG|SGR_ATTR_BG]
@@ -120,7 +130,6 @@ function fn_sgr_color16_set()
 {
     local -i _sgr_attr=$1
     local -i _color=$2
-
     local -i _sgr_code=$((_color + _sgr_attr))
     fn_sgr_op $_sgr_code
 }
@@ -133,7 +142,6 @@ function fn_sgr_color216_set()
 {
     local -i _sgr_attr=$1
     local -i _sgr_color=$2
-
     local -i _sgr_op=$((_sgr_attr + 8))
     local -i _sgr_code=$((_sgr_color + 16))
     fn_sgr_op "${_sgr_op};5;${_sgr_code}"
@@ -145,8 +153,8 @@ function fn_sgr_color216_set()
 function fn_sgr_grey26_get()
 {
     local -i _light=$1
-
     local -i _sgr_code
+
     case $_light in
         0)
             _sgr_code=0
@@ -158,7 +166,7 @@ function fn_sgr_grey26_get()
             _sgr_code=$((215 + _light))
             ;;
     esac
-
+    
     return $_sgr_code
 }
 

@@ -15,10 +15,8 @@ set -o nounset
 
 source ${BIW_HOME}/biw-term-sgr.sh
 source ${BIW_HOME}/biw-term-csi.sh
+source ${BIW_HOME}/biw-theme-mgr.sh
 source ${BIW_HOME}/biw-term-utf8.sh
-source ${BIW_HOME}/biw-term-hsl.sh
-source ${BIW_HOME}/biw-theme.sh
-source ${BIW_HOME}/biw-panel-vmenu.sh
 source ${BIW_HOME}/biw-panel-hmenu.sh
 source ${BIW_HOME}/biw-panel-credits.sh
 source ${BIW_HOME}/biw-controller.sh
@@ -33,10 +31,10 @@ declare -ri BIW_PANEL_WIDTH=60
 declare -r BIW_OC_ANIMATE_DELAY=0.01
 
 # Entires in HMenu
-declare -r BIW_MENU_HISTORY="History"
-declare -r BIW_MENU_BROWSE="File"
-declare -r BIW_MENU_THEME="Theme"
-declare -r BIW_MENU_CREDITS="Credits"
+declare -r BIW_MENU_HISTORY='History'
+declare -r BIW_MENU_BROWSE='File'
+declare -r BIW_MENU_THEME='Theme'
+declare -r BIW_MENU_CREDITS='Credits'
 
 # cached position of the curor after restore
 declare -i biw_cache_row_pos
@@ -77,7 +75,7 @@ function fn_biw_show()
 
     while [ 1 ]
     do
-        fn_hmenu_get_current_val "_menu_val"
+        fn_hmenu_get_current_val '_menu_val'
         biw_selection_result=''
 
         case $_menu_val in
@@ -125,10 +123,10 @@ function fn_biw_open()
 {
     # Install panic handler
     #set -o errexit 
-    trap "fn_biw_panic" EXIT
+    trap 'fn_biw_panic' EXIT
 
     # make sure we call menu close during terminate to restore terminal settings
-    trap "fn_biw_close; exit 1" SIGHUP SIGINT SIGTERM
+    trap 'fn_biw_close; exit 1' SIGHUP SIGINT SIGTERM
 
     # disable echo during redraw or else quickly repeated arrow keys
     # could move the cursor
@@ -230,7 +228,7 @@ function fn_biw_panic()
     echo "=> ${_command}"
     echo
 
-    echo "Call stack:"
+    echo 'Call stack:'
     local _frame=0
     while caller $_frame
     do

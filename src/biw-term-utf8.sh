@@ -9,12 +9,13 @@
 # Description:  Send UTF-8 characters.
 ##
 
-# Codes to print from the DEC graphics charset
+# UTF-8 codepoints are cached as encoded values.
 function fn_utf8_init()
 {
     fn_utf8_set_readonly BIW_CHAR_QUOTE_LT      0x00AB
     fn_utf8_set_readonly BIW_CHAR_QUOTE_RT      0x00BB
     fn_utf8_set_readonly BIW_CHAR_BULLET        0x2022
+    fn_utf8_set_readonly BIW_CHAR_DBL_EXCL      0x203C
     fn_utf8_set_readonly BIW_CHAR_CHECK         0x221A
     fn_utf8_set_readonly BIW_CHAR_LINE_HZ       0x2500
     fn_utf8_set_readonly BIW_CHAR_LINE_VT       0x2502
@@ -86,43 +87,43 @@ function fn_utf8_get_encoded()
 
     # Bash only supports \u \U since 4.2 so we encode manually.
 
-    if [[ "$_ordinal" -le 0x7f ]]
+    if [[ $_ordinal -le 0x7f ]]
     then
-        printf -v $_result_ref "\\%03o" "$_ordinal"
+        printf -v $_result_ref '\\%03o' "$_ordinal"
 
-    elif [[ ${_ordinal} -le 0x7ff        ]]
+    elif [[ $_ordinal -le 0x7ff        ]]
     then
-        printf -v $_result_ref "\\%03o" \
+        printf -v $_result_ref '\\%03o' \
             $((  (${_ordinal}>> 6)      |0xc0 )) \
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
-    elif [[ ${_ordinal} -le 0xffff       ]]
+    elif [[ $_ordinal -le 0xffff       ]]
     then
-        printf -v $_result_ref "\\%03o" \
+        printf -v $_result_ref '\\%03o' \
             $(( ( ${_ordinal}>>12)      |0xe0 )) \
             $(( ((${_ordinal}>> 6)&0x3f)|0x80 )) \
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
-    elif [[ ${_ordinal} -le 0x1fffff     ]]
+    elif [[ $_ordinal -le 0x1fffff     ]]
     then
-        printf -v $_result_ref "\\%03o"  \
+        printf -v $_result_ref '\\%03o'  \
             $(( ( ${_ordinal}>>18)      |0xf0 )) \
             $(( ((${_ordinal}>>12)&0x3f)|0x80 )) \
             $(( ((${_ordinal}>> 6)&0x3f)|0x80 )) \
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
-    elif [[ ${_ordinal} -le 0x3ffffff    ]]
+    elif [[ $_ordinal -le 0x3ffffff    ]]
     then
-        printf -v $_result_ref "\\%03o"  \
+        printf -v $_result_ref '\\%03o'  \
             $(( ( ${_ordinal}>>24)      |0xf8 )) \
             $(( ((${_ordinal}>>18)&0x3f)|0x80 )) \
             $(( ((${_ordinal}>>12)&0x3f)|0x80 )) \
             $(( ((${_ordinal}>> 6)&0x3f)|0x80 )) \
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
-    elif [[ ${_ordinal} -le 0x7fffffff ]]
+    elif [[ $_ordinal -le 0x7fffffff ]]
     then
-        printf -v $_result_ref "\\%03o"  \
+        printf -v $_result_ref '\\%03o'  \
             $(( ( ${_ordinal}>>30)      |0xfc )) \
             $(( ((${_ordinal}>>24)&0x3f)|0x80 )) \
             $(( ((${_ordinal}>>18)&0x3f)|0x80 )) \
