@@ -13,39 +13,30 @@
 # generate errors if unset vars are used.
 set -o nounset
 
-source ${BIW_HOME}/biw-term-sgr.sh
-source ${BIW_HOME}/biw-term-csi.sh
-source ${BIW_HOME}/biw-theme-mgr.sh
-source ${BIW_HOME}/biw-term-utf8.sh
-source ${BIW_HOME}/biw-panel-hmenu.sh
+source ${BIW_HOME}/biw-util.sh
+source ${BIW_HOME}/biw-panel-vmenu.sh
 source ${BIW_HOME}/biw-panel-credits.sh
-source ${BIW_HOME}/biw-controller.sh
 
 declare -r BIW_VERSION=0.9
-
-# global widget params
-declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=20
-declare -ri BIW_PANEL_WIDTH=60
-
-declare -r BIW_OC_ANIMATE_DELAY=0.01
 
 # Entires in HMenu
 declare -r BIW_MENU_HISTORY='History'
 declare -r BIW_MENU_BROWSE='File'
 declare -r BIW_MENU_THEME='Theme'
 declare -r BIW_MENU_CREDITS='Credits'
-
-# cached position of the curor after restore
-declare -i biw_cache_row_pos
+declare -r BIW_MENU_CONFIG='Config'
 
 # selected result when a panel is closed
 declare biw_selection_result
 
-# debug only
-declare -i BIW_DEBUG_ENABLE=0
-declare -i BIW_DEBUG_SEQ=0
-declare BIW_DEBUG_MSG=''
+# max values to load for history and file lists
+declare -ri BIW_LIST_MAX=50
+
+# max number of files to populate in file browser
+declare -ir BIW_BROWSE_MAX_FILES=50
+
+# used so we can generate a relative path
+declare -r BIW_ORIG_PWD=$PWD
 
 function fn_biw_main()
 {
@@ -56,9 +47,13 @@ function fn_biw_main()
         $BIW_MENU_HISTORY 
         $BIW_MENU_BROWSE 
         $BIW_MENU_THEME
+        $BIW_MENU_CONFIG
         $BIW_MENU_CREDITS)
 
     fn_hmenu_init _hmenu_values[@]
+
+    # init the theme
+    fn_theme_set_idx_active $theme_saved_idx
 
     # show the widgets
     fn_biw_show
@@ -69,13 +64,14 @@ function fn_biw_main()
 
 function fn_biw_show()
 {
-    local -r _history_cmd="fc -lnr -$CTL_LIST_MAX"
+    local -r _history_cmd="fc -lnr -$BIW_LIST_MAX"
 
-    fn_biw_open
+    fn_utl_panel_open
 
     while [ 1 ]
     do
         fn_hmenu_get_current_val '_menu_val'
+        fn_hmenu_redraw
         biw_selection_result=''
 
         case $_menu_val in
@@ -91,179 +87,243 @@ function fn_biw_show()
             $BIW_MENU_CREDITS)
                 fn_ctl_credits_controller
                 ;;
+            *)
+                fn_ctl_default
+                ;;
         esac
 
-        # exit if controller gave non-zero status
-        if [ $? != 0 ]
+        # exit if controller returned action ignored status
+        if [ $? == $UTL_ACT_IGNORED ]
         then
             break
         fi
     done
 
-    fn_biw_close
+    fn_utl_panel_close
 }
 
-function fn_biw_set_cursor_pos()
+# this is used when we add a menu entry which has no controller
+function fn_ctl_default()
 {
-    local -i _abs_row=$1
-    local -i _abs_col=$2
+    local _key
 
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_UP $((BIW_PANEL_HEIGHT - _abs_row))
-    fn_biw_set_col_pos $_abs_col
-}
-
-function fn_biw_set_col_pos()
-{
-    local -i _abs_col=$1
-    fn_csi_op $CSI_OP_COL_POS $((BIW_MARGIN + _abs_col))
-}
-
-function fn_biw_open()
-{
-    # Install panic handler
-    #set -o errexit 
-    trap 'fn_biw_panic' EXIT
-
-    # make sure we call menu close during terminate to restore terminal settings
-    trap 'fn_biw_close; exit 1' SIGHUP SIGINT SIGTERM
-
-    # disable echo during redraw or else quickly repeated arrow keys
-    # could move the cursor
-    stty -echo
-
-    # hide the cursor to eliminate flicker
-    fn_csi_op $CSI_OP_CURSOR_HIDE
-
-    # get the current position of the cursor
-    fn_csi_get_row_pos 'biw_cache_row_pos'
-
-    # scroll the screen to make space.
-    fn_biw_scroll_open
-
-    # save the cursor for a "home position"
-    fn_csi_op $CSI_OP_CURSOR_SAVE
-}
-
-function fn_biw_scroll_open()
-{
-    local -i _move_lines=$((biw_cache_row_pos - BIW_PANEL_HEIGHT - 1))
-    #echo "biw_cache_row_pos: $biw_cache_row_pos"
-    #exit
-
-    # if we are too close to the top of the screen then we need 
-    # to move down instead of scroll up.
-    if((_move_lines < 0))
-    then
-        fn_csi_op $CSI_OP_ROW_DOWN $BIW_PANEL_HEIGHT
-
-        # update cursor position
-        fn_csi_get_row_pos 'biw_cache_row_pos'
-        return
-    fi
-
-    # animate open
-    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
+    while fn_utl_process_key _key
     do
-        fn_csi_op $CSI_OP_SCROLL_UP 1
-        fn_csi_milli_wait $BIW_OC_ANIMATE_DELAY
+        if [ "$_key" == $CSI_KEY_ENTER ]
+        then
+            # exit application
+            return $UTL_ACT_IGNORED
+        fi
     done
 
-    # non-animated open:
-    #fn_csi_op $CSI_OP_SCROLL_UP $BIW_PANEL_HEIGHT
-    #fn_biw_cursor_home
-    #fn_csi_op $CSI_OP_ROW_INSERT $BIW_PANEL_HEIGHT
+    # return changed action status so we don't exit
+    return $UTL_ACT_CHANGED
 }
 
-function fn_biw_close()
+function fn_ctl_credits_controller()
 {
-    # position the cursor at the start of the menu
-    fn_biw_set_cursor_pos 0 0
+    # change to matrix theme
+    fn_theme_idx_from_name THEME_TYPE_MATRIX
+    local -i _theme_idx=$?
+    fn_theme_set_idx_active $_theme_idx
+    fn_hmenu_redraw
 
-    # animate close
-    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
+    # show animation. This will block until cancelled.
+    fn_cred_show
+
+    # restore original theme
+    fn_theme_set_idx_active $theme_saved_idx
+
+    return $UTL_ACT_CHANGED
+}
+
+function fn_ctl_list_controller()
+{
+    local _panel_command=$1
+    local -a _values
+
+    # read command into _values
+    mapfile -t -n $BIW_LIST_MAX _values < <($_panel_command)
+
+    # remove first 2 leading blanks for history case
+    _values=("${_values[@]#[[:blank:]][[:blank:]]}")
+
+    fn_vmenu_init _values[@]
+    fn_vmenu_redraw
+
+    local _key
+    while fn_utl_process_key _key
     do
-        fn_csi_op $CSI_OP_ROW_DELETE 1
-        fn_csi_op $CSI_OP_SCROLL_DOWN 1
-        fn_csi_op $CSI_OP_ROW_DOWN 1
-        fn_csi_milli_wait $BIW_OC_ANIMATE_DELAY
+        fn_vmenu_actions "$_key"
+        if [ $? == $UTL_ACT_CHANGED ]
+        then
+            # vmenu handled the action so get next key
+            continue
+        fi
+
+        if [ "$_key" == $CSI_KEY_ENTER ]
+        then
+            # we got the enter key so close the menu
+            fn_vmenu_get_current_val "biw_selection_result"
+            return $UTL_ACT_IGNORED
+        fi
     done
 
-    # non-animate close:
-    #fn_csi_op $CSI_OP_ROW_DELETE $BIW_PANEL_HEIGHT
-    #fn_csi_op $CSI_OP_SCROLL_DOWN $BIW_PANEL_HEIGHT
-
-    # restore original cursor position
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-
-    # clear out any junk on the line
-    fn_csi_op $CSI_OP_ROW_ERASE
-
-    # restore terminal settings
-    fn_csi_op $CSI_OP_CURSOR_SHOW
-
-    # remove signal handler
-    trap - SIGHUP SIGINT SIGTERM
-
-    # remove panic handler
-    trap - EXIT
+    return $UTL_ACT_CHANGED
 }
 
-function fn_biw_panic()
+function fn_ctl_theme_controller()
 {
-    set +x
-    local _fail_func=${FUNCNAME[1]}
-    local _fail_line=${BASH_LINENO[0]}
-    local _command=$BASH_COMMAND
+    # load theme data into menu
+    fn_vmenu_init "theme_name_list[@]" $theme_active_idx
+    vmenu_ind_values=( [theme_active_idx]=$BIW_CHAR_BULLET )
+    fn_vmenu_redraw
 
-    # flush any commands in the buffer
-    fn_sgr_seq_flush
-
-    # show and restore cursor
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_CURSOR_SHOW
-
-    echo
-    echo "PANIC Failure at (${_fail_func}:${_fail_line}):"
-    echo "=> ${_command}"
-    echo
-
-    echo 'Call stack:'
-    local _frame=0
-    while caller $_frame
+    local _key
+    while fn_utl_process_key _key
     do
-        ((_frame++))
+        fn_vmenu_actions "$_key"
+        if [ $? == $UTL_ACT_CHANGED ]
+        then
+            # use the vmenu index to determine the selected theme
+            fn_theme_set_idx_active $vmenu_idx_selected
+            fn_hmenu_redraw
+            fn_vmenu_redraw
+        fi
+
+        case "$_key" in
+            $CSI_KEY_ENTER) 
+                # Save selected Theme
+                fn_theme_save
+
+                # update checkbox
+                vmenu_ind_values=( [theme_active_idx]=$BIW_CHAR_BULLET )
+                fn_vmenu_redraw
+                ;;
+        esac
     done
 
-    exit 1
+    fn_theme_set_idx_active $theme_saved_idx
+    return $UTL_ACT_CHANGED
 }
 
-fn_biw_debug_print()
+function fn_ctl_browse_controller()
 {
-    if((BIW_DEBUG_ENABLE <= 0))
-    then
-        return
-    fi
+    fn_ctl_browse_update
 
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_ERASE
+    local _key
+    while fn_utl_process_key _key
+    do
+        fn_vmenu_actions "$_key"
+        if [ $? == $UTL_ACT_CHANGED ]
+        then
+            # vmenu handled the action so get next key
+            continue
+        fi
 
-    printf 'DEBUG(%03d): %s' $BIW_DEBUG_SEQ "${BIW_DEBUG_MSG:-<none>}"
+        if [ "$_key" == $CSI_KEY_ENTER ]
+        then
+            # enter key was hit so update the screen
+            fn_ctl_browse_select
 
-    BIW_DEBUG_MSG=''
-    ((BIW_DEBUG_SEQ++))
+            if [ $? == 1 ]
+            then
+                # user selected a file so exit program
+                return $UTL_ACT_IGNORED
+            fi
+
+            continue
+        fi
+    done
+
+    return $UTL_ACT_CHANGED
 }
 
-fn_biw_debug_msg()
+function fn_ctl_browse_select()
 {
-    if((BIW_DEBUG_ENABLE <= 0))
+    local _selected_file
+    fn_vmenu_get_current_val '_selected_file'
+
+    if [ ! -d "$_selected_file" ]
     then
-        return
+        # we got the enter key so close the menu
+        local _rel_dir
+        fn_utl_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
+        biw_selection_result="${_rel_dir}/${_selected_file}"
+        return 1
     fi
 
-    local _pattern="${1:-<empty>}"
-    shift
-    printf -v BIW_DEBUG_MSG "%s: ${_pattern}" ${FUNCNAME[1]} "$@" 
+    if [ ! -x "$_selected_file" ]
+    then    
+        fn_vmenu_set_message "ERROR: Directory permission denied."
+        fn_vmenu_redraw
+        return 0
+    fi
+
+    # change real directories
+    cd "$_selected_file" || fn_utl_die "Failed to change directory: $PWD"
+
+    # update panel with new directory
+    fn_ctl_browse_update
+
+    return 0
+}
+
+function fn_ctl_browse_update()
+{
+    # fetch files
+    local -a _ls_output
+    local -r _ls_command="/bin/ls -a -p -1"
+
+    # read ls command results into an array
+    mapfile -n$BIW_BROWSE_MAX_FILES -s1 -t _ls_output < <($_ls_command)
+
+    local -a _file_list=()
+    local -a _file_list_ind=()
+    local -a _dir_list=()
+    local -a _dir_list_ind=()
+
+    local -i _file_idx
+    local _file
+
+    for((_file_idx=0; _file_idx < ${#_ls_output[@]}; _file_idx++))
+    do
+        _file=${_ls_output[_file_idx]}
+
+        if [[ "$_file" =~ ^(.*)/$ ]]
+        then
+            _dir_list+=( "$_file" )
+
+            if [ ! -x "$_file" ]
+            then
+                _dir_list_ind+=( $BIW_CHAR_DBL_EXCL )
+            elif [ "$_file" == '../' ]
+            then
+                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_LT )
+            else 
+                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_RT )
+            fi
+        else
+            _file_list+=( "$_file" )
+            _file_list_ind+=( $BIW_CHAR_BULLET )
+        fi
+    done
+
+    local -a _dir_view=( "${_dir_list[@]}" )
+
+    if [ ${#_file_list[@]} != 0 ]
+    then
+        _dir_view+=( "${_file_list[@]}" )
+    fi
+
+    local _rel_dir
+    fn_utl_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
+
+    fn_vmenu_init _dir_view[@]
+    vmenu_ind_values=( "${_dir_list_ind[@]}" "${_file_list_ind[@]:-}" )
+    fn_vmenu_set_message "PWD [${_rel_dir}]"
+    
+    fn_vmenu_redraw
 }
 
 # entry point

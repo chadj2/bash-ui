@@ -148,8 +148,7 @@ function fn_theme_parse_color()
         # this is a greyscale-26 color
         if [ "${_color_params[0]}" != 'G26' ]
         then
-            echo "ERROR: Expected G26 params for ${_theme_name}: ${_color_params[@]}"
-            exit 1
+            fn_utl_die "Expected G26 params for ${_theme_name}: ${_color_params[@]}"
         fi
 
         local -i _light=${_color_params[1]}
@@ -161,8 +160,7 @@ function fn_theme_parse_color()
     then
         if [ ${_color_params[0]} != 'HSL216' ]
         then
-            echo "ERROR: Expected HSL params for ${_theme_name}: ${_color_params[@]}"
-            exit 1
+            fn_utl_die "Expected HSL params for ${_theme_name}: ${_color_params[@]}"
         fi
 
         # this must be an HSL color
@@ -174,8 +172,7 @@ function fn_theme_parse_color()
         _color_result=$?
         ((_color_result += THEME_CFG_HSL_BASE))
     else
-        echo "ERROR: Bad color for ${_theme_name}: ${_color_params[@]}"
-        exit 1
+        fn_utl_die "Bad color for ${_theme_name}: ${_color_params[@]}"
     fi
 
     printf -v $_result_ref '%d' $_color_result
@@ -201,8 +198,7 @@ fn_theme_idx_from_name()
         fi
     done
 
-    echo "ERROR Theme not identified: $_theme_name"
-    exit 1
+    fn_utl_die "Theme not identified: $_theme_name"
 }
 
 function fn_theme_set_desc_list()

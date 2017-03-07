@@ -143,8 +143,7 @@ function fn_hsl216_get()
 
     if((_light >= HSL216_LIGHT_SIZE))
     then
-        echo "Error: L value must be the range [0..5]: ${_light}"
-        exit 1
+        fn_utl_die "L value must be the range [0..5]: ${_light}"
     fi
 
     # handle negative saturation

@@ -132,8 +132,7 @@ function fn_utf8_get_encoded()
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
     else
-        echo "ERROR: could not convert UTF-8 ordinal: <$_ordinal>"
-        exit 1
+        fn_utl_die "Could not convert UTF-8 ordinal: <$_ordinal>"
     fi
 }
 

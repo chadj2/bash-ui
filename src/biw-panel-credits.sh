@@ -56,12 +56,12 @@ function fn_cred_show()
 
     fn_cred_blank_panel
     fn_cred_load_data
-    fn_biw_debug_print
+    fn_utl_debug_print
     
     fn_cred_print_data
     local -i _result=$?
 
-    fn_biw_debug_msg "result: %d" $_result
+    fn_utl_debug_msg "result: %d" $_result
 
     # if animation was canceled then we get a non-zero status
     return $_result
@@ -83,93 +83,6 @@ EOM
     cred_line_data_size=${#cred_line_data[*]}
 }
 
-function fn_cred_set_color()
-{
-    local -i _sgr_color=$1
-
-    if((cred_color_use_216))
-    then
-        fn_sgr_color216_set $SGR_ATTR_FG $_sgr_color
-    else
-        fn_sgr_color16_set $SGR_ATTR_FG $_sgr_color
-    fi
-}
-
-function fn_color_map_simple()
-{
-    cred_color_map=(
-        [0]=0
-        [1]=$SGR_COL_GREEN
-        [2]=$SGR_COL_YELLOW
-        [3]=$SGR_COL_YELLOW
-        [4]=$SGR_COL_YELLOW
-        [5]=$SGR_COL_YELLOW
-        [6]=$SGR_COL_YELLOW
-        [7]=$SGR_COL_YELLOW
-        [8]=$SGR_COL_YELLOW
-        [9]=$SGR_COL_YELLOW
-        [10]=$SGR_COL_YELLOW
-        [11]=$SGR_COL_YELLOW
-        [12]=$SGR_COL_YELLOW
-    )
-}
-
-function fn_color_map_hsl_hue()
-{
-    local -ir _hsl_sat=4
-    local -ir _hsl_light=5
-    local -ir _color_repeat=2
-    local -i _hsl_hue
-    local -i _sgr_code
-    local -i _map_idx=0
-
-    # 0 index is reserved
-    cred_color_use_216=1
-    cred_color_map=()
-    cred_color_map[_map_idx++]=0
-
-    for((_hsl_hue = HSL216_HUE_GREEN; _hsl_hue <= HSL216_HUE_BLUE; _hsl_hue++))
-    do
-        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
-        _sgr_code=$?
-
-        for((_hsl_sat_length = 0; _hsl_sat_length <= $_color_repeat; _hsl_sat_length++))
-        do
-            cred_color_map[_map_idx++]=$_sgr_code
-        done
-    done
-}
-
-function fn_color_map_hsl_saturation()
-{
-    # move through the HSL cylinder on hue=12 (120 degrees)
-    local -ir _max_hsl_hue=3
-    local -ir _min_hsl_hue=-5
-    local -ir _hsl_hue=12
-    local -ir _hsl_light=5
-    local -i _hsl_sat
-    local -i _sgr_code
-    local -i _map_idx=0
-
-    # 0 index is reserved
-    cred_color_use_216=1
-    cred_color_map=()
-    cred_color_map[_map_idx++]=0
-
-    # go through cylinder from the color indicated by hue to its inverse.
-    # we go from partially saturated green (sat=3) because (sat=5) is too deep.
-    for((_hsl_sat = _max_hsl_hue; _hsl_sat >= _min_hsl_hue; _hsl_sat--))
-    do
-        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
-        _sgr_code=$?
-
-        for((_hsl_sat_length = 0; _hsl_sat_length <= 4; _hsl_sat_length++))
-        do
-            cred_color_map[_map_idx++]=$_sgr_code
-        done
-    done
-}
-
 function fn_cred_print_data()
 {
     local -i _line_idx
@@ -188,11 +101,11 @@ function fn_cred_print_data()
         if ! fn_cred_print_line "${_line_val}" $_persist_cursor
         then
             # cancel by user input
-            return 1
+            return $UTL_ACT_IGNORED
         fi
     done
 
-    return 0
+    return $UTL_ACT_CHANGED
 }
 
 function fn_cred_print_line()
@@ -228,7 +141,7 @@ function fn_cred_print_line()
 
     # start main animation loop. 
     # Elements execute asynchronously.
-    while fn_ctl_process_key '_result_char' $CRED_ANIMATE_DELAY
+    while fn_utl_process_key '_result_char' $CRED_ANIMATE_DELAY
     do
         _terminate_loop=1
 
@@ -326,7 +239,7 @@ function fn_cred_print_alpha()
         return 1
     fi
 
-    fn_biw_set_col_pos $((_line_start + _alpha_start))
+    fn_utl_set_col_pos $((_line_start + _alpha_start))
 
     local _char_val
     local -i _alpha_color
@@ -380,7 +293,7 @@ function fn_cred_print_cursor()
     local -i _cursor_pos=$((_line_start + _line_width))
     local -i _should_show=$1
 
-    fn_biw_set_col_pos $_cursor_pos
+    fn_utl_set_col_pos $_cursor_pos
 
     local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
     fn_cred_set_color $_sgr_color
@@ -399,7 +312,7 @@ function fn_cred_canvas_set_cursor()
     local -i _row_pos=$1
     local -i _col_pos=$2
 
-    fn_biw_set_cursor_pos \
+    fn_utl_set_cursor_pos \
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
 
@@ -415,7 +328,7 @@ function fn_cred_blank_panel()
         local -i _row_pos=$((cred_row_pos + _line_idx))
         fn_sgr_seq_start
 
-        fn_biw_set_cursor_pos $_row_pos 0
+        fn_utl_set_cursor_pos $_row_pos 0
         fn_theme_set_attr $THEME_SET_DEF_INACTIVE
 
         if((_line_idx < cred_canvas_height))
@@ -432,7 +345,7 @@ function fn_cred_blank_line()
 {
     fn_utf8_print $BIW_CHAR_LINE_VT
     fn_csi_print_width '' $cred_canvas_width
-    fn_biw_set_col_pos $((cred_width - 1))
+    fn_utl_set_col_pos $((cred_width - 1))
     fn_utf8_print $BIW_CHAR_LINE_VT
 }
 
@@ -441,4 +354,92 @@ function fn_cred_bottom_line()
     fn_utf8_print $BIW_CHAR_LINE_BT_LT
     fn_utf8_print_h_line $cred_canvas_width
     fn_utf8_print $BIW_CHAR_LINE_BT_RT
+}
+
+
+function fn_cred_set_color()
+{
+    local -i _sgr_color=$1
+
+    if((cred_color_use_216))
+    then
+        fn_sgr_color216_set $SGR_ATTR_FG $_sgr_color
+    else
+        fn_sgr_color16_set $SGR_ATTR_FG $_sgr_color
+    fi
+}
+
+function fn_color_map_simple()
+{
+    cred_color_map=(
+        [0]=0
+        [1]=$SGR_COL_GREEN
+        [2]=$SGR_COL_YELLOW
+        [3]=$SGR_COL_YELLOW
+        [4]=$SGR_COL_YELLOW
+        [5]=$SGR_COL_YELLOW
+        [6]=$SGR_COL_YELLOW
+        [7]=$SGR_COL_YELLOW
+        [8]=$SGR_COL_YELLOW
+        [9]=$SGR_COL_YELLOW
+        [10]=$SGR_COL_YELLOW
+        [11]=$SGR_COL_YELLOW
+        [12]=$SGR_COL_YELLOW
+    )
+}
+
+function fn_color_map_hsl_hue()
+{
+    local -ir _hsl_sat=4
+    local -ir _hsl_light=5
+    local -ir _color_repeat=2
+    local -i _hsl_hue
+    local -i _sgr_code
+    local -i _map_idx=0
+
+    # 0 index is reserved
+    cred_color_use_216=1
+    cred_color_map=()
+    cred_color_map[_map_idx++]=0
+
+    for((_hsl_hue = HSL216_HUE_GREEN; _hsl_hue <= HSL216_HUE_BLUE; _hsl_hue++))
+    do
+        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
+        _sgr_code=$?
+
+        for((_hsl_sat_length = 0; _hsl_sat_length <= $_color_repeat; _hsl_sat_length++))
+        do
+            cred_color_map[_map_idx++]=$_sgr_code
+        done
+    done
+}
+
+function fn_color_map_hsl_saturation()
+{
+    # move through the HSL cylinder on hue=12 (120 degrees)
+    local -ir _max_hsl_hue=3
+    local -ir _min_hsl_hue=-5
+    local -ir _hsl_hue=12
+    local -ir _hsl_light=5
+    local -i _hsl_sat
+    local -i _sgr_code
+    local -i _map_idx=0
+
+    # 0 index is reserved
+    cred_color_use_216=1
+    cred_color_map=()
+    cred_color_map[_map_idx++]=0
+
+    # go through cylinder from the color indicated by hue to its inverse.
+    # we go from partially saturated green (sat=3) because (sat=5) is too deep.
+    for((_hsl_sat = _max_hsl_hue; _hsl_sat >= _min_hsl_hue; _hsl_sat--))
+    do
+        fn_hsl216_get $_hsl_hue $_hsl_sat $_hsl_light
+        _sgr_code=$?
+
+        for((_hsl_sat_length = 0; _hsl_sat_length <= 4; _hsl_sat_length++))
+        do
+            cred_color_map[_map_idx++]=$_sgr_code
+        done
+    done
 }

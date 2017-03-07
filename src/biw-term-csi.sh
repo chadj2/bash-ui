@@ -44,6 +44,9 @@ declare -r CSI_KEY_ENTER='ENT'
 declare -r CSI_KEY_F9='20~'
 declare -r CSI_KEY_F12='24~'
 
+# cached position of the curor after restore
+declare -i sgr_cache_row_pos
+
 # This controls how long we wait for ESC codes to arrive.
 declare -r CSI_READ_ESC_TIMEOUT=1
 
@@ -177,7 +180,7 @@ function fn_csi_scroll_region()
     local -i _direction=$2
 
     # set the scrolling bounds
-    local -i _abs_top=$((biw_cache_row_pos - _region_height))
+    local -i _abs_top=$((sgr_cache_row_pos - _region_height))
     local -i _abs_bottom=$((_abs_top + _region_height - 1))
 
     # set the scrolling bounds
@@ -207,8 +210,7 @@ function fn_csi_read_delim()
 
     if ! read -t$CSI_READ_ESC_TIMEOUT -s -d$_delimiter $_result_ref
     then
-        echo "Failed to read delimiter <$_delimiter> within timeout."
-        exit 1
+        fn_utl_die "Failed to read delimiter <$_delimiter> within timeout."
     fi
 
     return 0
@@ -223,8 +225,7 @@ function fn_csi_read_char()
 
     if ! read -t$CSI_READ_ESC_TIMEOUT -s -N1 $_result_ref
     then
-        echo "Failed to read ESC code within timeout."
-        exit 1
+        fn_utl_die "Failed to read ESC code within timeout."
     fi
 
     return 0

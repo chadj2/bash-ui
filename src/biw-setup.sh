@@ -46,8 +46,7 @@ function fn_biw_setup_env()
 {
     if [[ ! "$-" =~ "i" ]]
     then
-        echo "ERROR: This script must be sourced and not executed."
-        exit 1
+        fn_utl_die "This script must be sourced and not executed."
     fi
 
     # file where history result will be saved

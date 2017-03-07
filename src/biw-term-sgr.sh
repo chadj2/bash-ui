@@ -69,7 +69,7 @@ function fn_csi_print_width()
     local -i _line_width=$2
     local -i _out_size=${#_out}
 
-    fn_sgr_print "$_out"
+    fn_sgr_print "${_out:0:${_line_width}}"
     fn_csi_op $CSI_OP_COL_ERASE $((_line_width - _out_size))
 }
 
@@ -92,8 +92,7 @@ function fn_sgr_seq_start()
 {
     if((sgr_buffer_active > 0))
     then
-        echo "ERROR: SGR is already in a transaction"
-        exit
+        fn_utl_die "SGR is already in a transaction"
     fi
     sgr_buffer_data=()
     sgr_buffer_active=1

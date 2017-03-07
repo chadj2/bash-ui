@@ -67,7 +67,7 @@ function fn_vmenu_init()
 fn_vmenu_actions()
 {
     local _key=$1
-    local _result=$CTL_ACT_IGNORED
+    local _result=$UTL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_UP)
@@ -136,7 +136,7 @@ function fn_vmenu_action_move()
     if ((vmenu_idx_selected == _new_idx))
     then
         # no change
-        return $CTL_ACT_IGNORED
+        return $UTL_ACT_IGNORED
     fi
 
     vmenu_idx_selected=$_new_idx
@@ -146,20 +146,20 @@ function fn_vmenu_action_move()
     then
         # moving selection within existing bounds
         fn_vmenu_move_selector $_relative_idx
-        return $CTL_ACT_CHANGED
+        return $UTL_ACT_CHANGED
     fi
 
     if((_relative_idx == -1 || _relative_idx == 1))
     then
         # use fast single row scroll
         fn_vmenu_fast_scroll $_relative_idx
-        return $CTL_ACT_CHANGED
+        return $UTL_ACT_CHANGED
     fi
 
     # redraw entire screen
     fn_vmenu_redraw
 
-    return $CTL_ACT_CHANGED
+    return $UTL_ACT_CHANGED
 }
 
 function fn_vmenu_fast_scroll()
@@ -178,7 +178,7 @@ function fn_vmenu_fast_scroll()
     fn_vmenu_draw_row $((vmenu_idx_panel_top + vmenu_height - 1))
 
     #fn_vmenu_redraw
-    fn_biw_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
+    fn_utl_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
 }
 
 function fn_vmenu_move_selector()
@@ -189,7 +189,7 @@ function fn_vmenu_move_selector()
     fn_vmenu_draw_row $((vmenu_idx_selected - _direction))
     fn_vmenu_draw_row $vmenu_idx_selected
 
-    fn_biw_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
+    fn_utl_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
 }
 
 function fn_vmenu_set_row_idx()
@@ -197,7 +197,7 @@ function fn_vmenu_set_row_idx()
     local -i _line_idx=$1
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
     local -i _row_pos=$((vmenu_row_pos + _abs_index))
-    fn_biw_set_cursor_pos $_row_pos 0
+    fn_utl_set_cursor_pos $_row_pos 0
 }
 
 function fn_vmenu_redraw()
@@ -225,7 +225,7 @@ function fn_vmenu_redraw()
         vmenu_idx_panel_end=$vmenu_idx_last
     fi
 
-    fn_biw_debug_msg 'A=%d T=%d E=%d B=%d' \
+    fn_utl_debug_msg 'A=%d T=%d E=%d B=%d' \
         $vmenu_idx_selected \
         $vmenu_idx_panel_top \
         $vmenu_idx_panel_end \
@@ -338,7 +338,7 @@ function fn_vmenu_draw_slider()
         fi
     fi
 
-    fn_biw_set_col_pos $((vmenu_width - 1))
+    fn_utl_set_col_pos $((vmenu_width - 1))
     fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "$_last_char"
 }

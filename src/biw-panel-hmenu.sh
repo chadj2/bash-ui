@@ -43,7 +43,7 @@ function fn_hmenu_init()
 fn_hmenu_actions()
 {
     local _key=$1
-    local _result=$CTL_ACT_IGNORED
+    local _result=$UTL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_LEFT)
@@ -85,7 +85,7 @@ function fn_hmenu_action_move()
     if((hmenu_idx_selected == _new_idx))
     then
         # no change
-        return $CTL_ACT_IGNORED
+        return $UTL_ACT_IGNORED
     fi
 
     hmenu_idx_selected=$_new_idx
@@ -94,7 +94,7 @@ function fn_hmenu_action_move()
     fn_hmenu_draw_item $((hmenu_idx_selected - _direction))
     fn_hmenu_draw_item $((hmenu_idx_selected))
     
-    return $CTL_ACT_CHANGED
+    return $UTL_ACT_CHANGED
 }
 
 function fn_hmenu_redraw()
@@ -127,7 +127,7 @@ function fn_hmenu_draw_item()
 
     fn_sgr_seq_start
 
-    fn_biw_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
+    fn_utl_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
     fn_theme_set_attr_panel $((_item_idx == hmenu_idx_selected))
     fn_sgr_op $SGR_ATTR_UNDERLINE
 
