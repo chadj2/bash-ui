@@ -45,8 +45,6 @@ declare -ri THEME_SET_DEF_ACTIVE=30
 declare -ri THEME_SET_SLI_INACTIVE=40
 declare -ri THEME_SET_SLI_ACTIVE=50
 
-# file for persisting theme
-declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
 
 # initialize the default theme
 declare -i theme_active_idx=-1
@@ -60,6 +58,9 @@ declare -i theme_saved_idx=-1
 # reference of theme names
 declare -a theme_name_list
 
+# settings param name
+declare -r theme_param_name='theme-name'
+
 fn_theme_init()
 {
     fn_theme_set_desc_list
@@ -67,24 +68,29 @@ fn_theme_init()
     if [ ! -r $BIW_SETTINGS_FILE ]
     then
         # nothing to load so set default
-        fn_theme_set_idx_active -1
+        fn_theme_set_idx_active 0
         return
     fi
 
-    local _saved_name=$(cat $BIW_SETTINGS_FILE)
-
+    local _saved_name
+    fn_settings_get_param '_saved_name' $theme_param_name
     fn_theme_idx_from_name $_saved_name
     theme_saved_idx=$?
+
+    # init the theme
+    fn_theme_set_idx_active $theme_saved_idx
+}
+
+function fn_theme_save()
+{
+    theme_saved_idx=$theme_active_idx
+    local _saved_theme=${THEME_LIST[$theme_saved_idx]}
+    fn_settings_set_param $theme_param_name $_saved_theme
 }
 
 function fn_theme_set_idx_active()
 {
     local -i _selected_idx=$1
-    if ((_selected_idx == -1))
-    then
-        # use the default
-        _selected_idx=0
-    fi
 
     if((_selected_idx == theme_active_idx))
     then
@@ -176,13 +182,6 @@ function fn_theme_parse_color()
     fi
 
     printf -v $_result_ref '%d' $_color_result
-}
-
-fn_theme_save()
-{
-    theme_saved_idx=$theme_active_idx
-    local _saved_theme=${THEME_LIST[$theme_saved_idx]}
-    echo ${_saved_theme} > $BIW_SETTINGS_FILE
 }
 
 fn_theme_idx_from_name()
@@ -290,6 +289,3 @@ function fn_theme_set_color()
         fn_sgr_color16_set $_mode $_theme_color
     fi
 }
-
-# always init theme
-fn_theme_init

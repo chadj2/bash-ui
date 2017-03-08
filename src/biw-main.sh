@@ -14,6 +14,11 @@
 set -o nounset
 
 source ${BIW_HOME}/biw-util.sh
+source ${BIW_HOME}/biw-term-sgr.sh
+source ${BIW_HOME}/biw-term-csi.sh
+source ${BIW_HOME}/biw-theme-mgr.sh
+source ${BIW_HOME}/biw-term-utf8.sh
+source ${BIW_HOME}/biw-panel-hmenu.sh
 source ${BIW_HOME}/biw-panel-vmenu.sh
 source ${BIW_HOME}/biw-panel-credits.sh
 
@@ -52,8 +57,7 @@ function fn_biw_main()
 
     fn_hmenu_init _hmenu_values[@]
 
-    # init the theme
-    fn_theme_set_idx_active $theme_saved_idx
+    fn_theme_init
 
     # show the widgets
     fn_biw_show
@@ -65,6 +69,7 @@ function fn_biw_main()
 function fn_biw_show()
 {
     local -r _history_cmd="fc -lnr -$BIW_LIST_MAX"
+
 
     fn_utl_panel_open
 

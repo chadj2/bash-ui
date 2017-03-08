@@ -10,11 +10,6 @@
 # Description:  Controller functions for vmenu panels
 ##
 
-source ${BIW_HOME}/biw-term-sgr.sh
-source ${BIW_HOME}/biw-term-csi.sh
-source ${BIW_HOME}/biw-theme-mgr.sh
-source ${BIW_HOME}/biw-term-utf8.sh
-source ${BIW_HOME}/biw-panel-hmenu.sh
 
 # global widget params
 declare -ri BIW_MARGIN=10
@@ -31,6 +26,10 @@ declare -i UTL_DEBUG_SEQ=0
 declare UTL_DEBUG_MSG=''
 
 declare -r UTL_OC_ANIMATE_DELAY=0.01
+
+# file for persisting theme
+declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
+declare -A biw_settings_params
 
 function fn_utl_set_cursor_pos()
 {
@@ -165,6 +164,65 @@ function fn_utl_panel_close()
 
     # remove panic handler
     trap - EXIT
+}
+
+function fn_settings_get_param()
+{
+    local _param_ref=$1
+    local _param_name=$2
+
+    fn_settings_load
+    local _param_val=${biw_settings_params[$_param_name]:-}
+    printf -v $_param_ref '%s' "$_param_val"
+}
+
+function fn_settings_set_param()
+{
+    local _param_name=$1
+    local _param_val=$2
+
+    biw_settings_params[$_param_name]="$_param_val"
+    fn_settings_save
+}
+
+function fn_settings_load()
+{
+    biw_settings_params=()
+
+    if [ ! -r $BIW_SETTINGS_FILE ]
+    then
+        # nothing to do
+        return 0
+    fi
+
+    local _line
+    while read -r _line
+    do
+        _key="${_line%%=*}"
+        _value=${_line##*=}
+
+        if [ -z "$_key" ] || [ -z "$_value" ]
+        then
+            # skip this because we did not get a complete 
+            # key/val pair
+            continue
+        fi
+
+        biw_settings_params[$_key]="$_value"
+
+    done < $BIW_SETTINGS_FILE
+}
+
+function fn_settings_save()
+{
+    local _key
+    local _value
+
+    for _key in "${!biw_settings_params[@]}"
+    do
+        _value="${biw_settings_params[$_key]}"
+        printf '%s=%s\n' $_key "$_value"
+    done > $BIW_SETTINGS_FILE
 }
 
 function fn_utl_die()
