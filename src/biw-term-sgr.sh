@@ -107,6 +107,8 @@ function fn_sgr_seq_flush()
         return
     fi
 
+    fn_sgr_op $SGR_ATTR_DEFAULT
+
     local -i _buf_size=${#sgr_buffer_data[@]}
     if((_buf_size > 0)) 
     then

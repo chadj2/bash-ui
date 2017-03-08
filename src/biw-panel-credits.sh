@@ -147,6 +147,8 @@ function fn_cred_print_line()
 
         fn_sgr_seq_start
 
+        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
+
         # render sprites
         if((_text_active)); then
             if ! fn_cred_animate_text; then _text_active=0; fi
@@ -315,8 +317,6 @@ function fn_cred_canvas_set_cursor()
     fn_utl_set_cursor_pos \
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
-
-    fn_theme_set_attr $THEME_SET_DEF_INACTIVE
 }
 
 function fn_cred_blank_panel()

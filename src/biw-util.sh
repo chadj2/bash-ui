@@ -10,11 +10,10 @@
 # Description:  Controller functions for vmenu panels
 ##
 
-
-# global widget params
-declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=20
-declare -ri BIW_PANEL_WIDTH=60
+source ${BIW_HOME}/biw-settings.sh
+source ${BIW_HOME}/biw-term-utf8.sh
+source ${BIW_HOME}/biw-term-sgr.sh
+source ${BIW_HOME}/biw-term-csi.sh
 
 # returned by actions to indicate if the menu contents changed. 
 declare -ri UTL_ACT_IGNORED=1
@@ -27,9 +26,6 @@ declare UTL_DEBUG_MSG=''
 
 declare -r UTL_OC_ANIMATE_DELAY=0.01
 
-# file for persisting theme
-declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
-declare -A biw_settings_params
 
 function fn_utl_set_cursor_pos()
 {
@@ -65,6 +61,13 @@ function fn_utl_process_key()
     fi
 
     fn_utl_debug_msg "_key=<%s>" "${!_key_ref}"
+
+    if [ "${!_key_ref}" == $CSI_KEY_ESC ]
+    then
+        # user pressed ESC so get out
+        biw_terminate_app=1
+        return $UTL_ACT_IGNORED
+    fi
 
     fn_hmenu_actions "${!_key_ref}"
     if [ $? == $UTL_ACT_CHANGED ]
@@ -166,71 +169,13 @@ function fn_utl_panel_close()
     trap - EXIT
 }
 
-function fn_settings_get_param()
-{
-    local _param_ref=$1
-    local _param_name=$2
-
-    fn_settings_load
-    local _param_val=${biw_settings_params[$_param_name]:-}
-    printf -v $_param_ref '%s' "$_param_val"
-}
-
-function fn_settings_set_param()
-{
-    local _param_name=$1
-    local _param_val=$2
-
-    biw_settings_params[$_param_name]="$_param_val"
-    fn_settings_save
-}
-
-function fn_settings_load()
-{
-    biw_settings_params=()
-
-    if [ ! -r $BIW_SETTINGS_FILE ]
-    then
-        # nothing to do
-        return 0
-    fi
-
-    local _line
-    while read -r _line
-    do
-        _key="${_line%%=*}"
-        _value=${_line##*=}
-
-        if [ -z "$_key" ] || [ -z "$_value" ]
-        then
-            # skip this because we did not get a complete 
-            # key/val pair
-            continue
-        fi
-
-        biw_settings_params[$_key]="$_value"
-
-    done < $BIW_SETTINGS_FILE
-}
-
-function fn_settings_save()
-{
-    local _key
-    local _value
-
-    for _key in "${!biw_settings_params[@]}"
-    do
-        _value="${biw_settings_params[$_key]}"
-        printf '%s=%s\n' $_key "$_value"
-    done > $BIW_SETTINGS_FILE
-}
 
 function fn_utl_die()
 {
     local _err_msg=$1
 
     fn_utl_set_col_pos 0
-    echo "ERROR: $msg" 2>&1
+    echo "ERROR: $_err_msg" 2>&1
 
     # this exit should trigger the fn_utl_panic trap.
     exit 1

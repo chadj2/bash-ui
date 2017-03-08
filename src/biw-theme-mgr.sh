@@ -45,47 +45,51 @@ declare -ri THEME_SET_DEF_ACTIVE=30
 declare -ri THEME_SET_SLI_INACTIVE=40
 declare -ri THEME_SET_SLI_ACTIVE=50
 
-
-# initialize the default theme
+# currently active theme
 declare -i theme_active_idx=-1
 
 # updated with the selected theme settings
 declare -a theme_active_data
 
-# indicates the loaded or last saved theme
-declare -i theme_saved_idx=-1
-
-# reference of theme names
-declare -a theme_name_list
+# Indexes computed from THEME_LIST
+declare -a theme_desc_lookup
+declare -A theme_id_lookup
 
 # settings param name
-declare -r theme_param_name='theme-name'
+declare -r THEME_PARAM_NAME='theme-name'
 
-fn_theme_init()
+function fn_theme_init()
 {
-    fn_theme_set_desc_list
+    local _theme_desc
+    local _theme_name
+    local _array_ref
+    local -i _theme_idx
 
-    if [ ! -r $BIW_SETTINGS_FILE ]
-    then
-        # nothing to load so set default
-        fn_theme_set_idx_active 0
-        return
-    fi
+    # populate lookups
+    theme_id_lookup=()
+    theme_desc_lookup=()
 
-    local _saved_name
-    fn_settings_get_param '_saved_name' $theme_param_name
-    fn_theme_idx_from_name $_saved_name
-    theme_saved_idx=$?
+    local -i _theme_list_size=${#THEME_LIST[@]}
 
-    # init the theme
-    fn_theme_set_idx_active $theme_saved_idx
+    for((_theme_idx=0; _theme_idx < _theme_list_size; _theme_idx++))
+    do
+        _theme_name="${THEME_LIST[_theme_idx]}"
+        _array_ref="$_theme_name[$THEME_CFG_DESC]"
+        _theme_desc="${!_array_ref}"
+
+        theme_desc_lookup+=( "$_theme_desc" )
+        theme_id_lookup+=( ["$_theme_name"]=$_theme_idx )
+    done
+
+    fn_theme_load
 }
 
-function fn_theme_save()
+function fn_theme_load()
 {
-    theme_saved_idx=$theme_active_idx
-    local _saved_theme=${THEME_LIST[$theme_saved_idx]}
-    fn_settings_set_param $theme_param_name $_saved_theme
+    local _saved_name
+    fn_settings_get_param $THEME_PARAM_NAME '_saved_name' $THEME_DEFAULT_NAME
+    local -i _saved_idx=${theme_id_lookup["$_saved_name"]}
+    fn_theme_set_idx_active $_saved_idx
 }
 
 function fn_theme_set_idx_active()
@@ -182,37 +186,6 @@ function fn_theme_parse_color()
     fi
 
     printf -v $_result_ref '%d' $_color_result
-}
-
-fn_theme_idx_from_name()
-{
-    local -r _theme_name=$1
-    local -i _theme_idx
-
-    for _theme_idx in ${!THEME_LIST[@]}
-    do
-        if [ ${THEME_LIST[$_theme_idx]} == $_theme_name ]
-        then
-            return $_theme_idx
-        fi
-    done
-
-    fn_utl_die "Theme not identified: $_theme_name"
-}
-
-function fn_theme_set_desc_list()
-{
-    local _theme_name
-    local _theme_type
-
-    theme_name_list=()
-
-    for _theme_type in "${THEME_LIST[@]}"
-    do
-        _theme_ref="$_theme_type[$THEME_CFG_DESC]"
-        _theme_name="${!_theme_ref}"
-        theme_name_list+=( "$_theme_name" )
-    done
 }
 
 function fn_theme_set_attr_panel()

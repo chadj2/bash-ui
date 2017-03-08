@@ -169,7 +169,7 @@ function fn_vmenu_fast_scroll()
     # draw the row to be scrolled to update the selection color
     fn_vmenu_draw_row $((vmenu_idx_selected - _direction)) $_direction
 
-    fn_csi_scroll_region $vmenu_height $_direction
+    fn_csi_scroll_region $vmenu_row_pos $vmenu_height $_direction
 
     ((vmenu_idx_panel_top += _direction))
     ((vmenu_idx_panel_end += _direction))
