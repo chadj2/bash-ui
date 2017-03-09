@@ -158,7 +158,7 @@ function fn_theme_parse_color()
         # this is a greyscale-26 color
         if [ "${_color_params[0]}" != 'G26' ]
         then
-            fn_utl_die "Expected G26 params for ${_theme_name}: ${_color_params[@]}"
+            fn_util_die "Expected G26 params for ${_theme_name}: ${_color_params[@]}"
         fi
 
         local -i _light=${_color_params[1]}
@@ -170,7 +170,7 @@ function fn_theme_parse_color()
     then
         if [ ${_color_params[0]} != 'HSL216' ]
         then
-            fn_utl_die "Expected HSL params for ${_theme_name}: ${_color_params[@]}"
+            fn_util_die "Expected HSL params for ${_theme_name}: ${_color_params[@]}"
         fi
 
         # this must be an HSL color
@@ -182,7 +182,7 @@ function fn_theme_parse_color()
         _color_result=$?
         ((_color_result += THEME_CFG_HSL_BASE))
     else
-        fn_utl_die "Bad color for ${_theme_name}: ${_color_params[@]}"
+        fn_util_die "Bad color for ${_theme_name}: ${_color_params[@]}"
     fi
 
     printf -v $_result_ref '%d' $_color_result

@@ -67,10 +67,34 @@ function fn_csi_print_width()
 {
     local _out="$1"
     local -i _line_width=$2
-    local -i _out_size=${#_out}
 
-    fn_sgr_print "${_out:0:${_line_width}}"
-    fn_csi_op $CSI_OP_COL_ERASE $((_line_width - _out_size))
+    local _out_trim="${_out:0:${_line_width}}"
+    local -i _out_size=${#_out_trim}
+    local -i _pad_chars=$((_line_width - _out_size))
+
+    fn_sgr_print "$_out_trim"
+    fn_csi_op $CSI_OP_COL_ERASE $_pad_chars
+    fn_csi_op $CSI_OP_COL_FORWARD $_pad_chars
+}
+
+function fn_csi_print_center()
+{
+    local _out="$1"
+    local -i _line_width=$2
+
+    local _out_trim="${_out:0:${_line_width}}"
+    local -i _out_size=${#_out_trim}
+
+    local _pad_chars=$(( (_line_width - _out_size)/2 ))
+    fn_csi_op $CSI_OP_COL_ERASE $_pad_chars
+    fn_csi_op $CSI_OP_COL_FORWARD $_pad_chars
+    ((_line_width -= _pad_chars))
+
+    fn_sgr_print "$_out_trim"
+    ((_line_width -= _out_size))
+
+    fn_csi_op $CSI_OP_COL_ERASE $_line_width
+    fn_csi_op $CSI_OP_COL_FORWARD $_line_width
 }
 
 # output data to the buffer
@@ -92,7 +116,7 @@ function fn_sgr_seq_start()
 {
     if((sgr_buffer_active > 0))
     then
-        fn_utl_die "SGR is already in a transaction"
+        fn_util_die "SGR is already in a transaction"
     fi
     sgr_buffer_data=()
     sgr_buffer_active=1

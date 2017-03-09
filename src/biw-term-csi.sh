@@ -185,7 +185,7 @@ function fn_csi_get_row_pos()
     then
         # format output as quoted
         printf -v _read_temp '%q' "$_read_temp"
-        fn_utl_die "Terminal sent garbled response to DSR: ${_read_temp}"
+        fn_util_die "Terminal sent garbled response to DSR: ${_read_temp}"
     fi
 
     # read the column position. We don't use this.
@@ -230,7 +230,7 @@ function fn_csi_read_delim()
 
     if ! read -t$_timeout -s -d$_delimiter $_result_ref
     then
-        fn_utl_die "Failed to read delimiter <$_delimiter> within timeout."
+        fn_util_die "Failed to read delimiter <$_delimiter> within timeout."
     fi
 
     return 0

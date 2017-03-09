@@ -51,7 +51,7 @@ function fn_vmenu_init()
     vmenu_idx_selected=${2:-0}
 
     # Geometry
-    vmenu_row_pos=$HMENU_HEIGHT
+    vmenu_row_pos=$((hmenu_row_pos + 1))
     vmenu_height=$((BIW_PANEL_HEIGHT - vmenu_row_pos))
     vmenu_width=$BIW_PANEL_WIDTH
     vmenu_footer_show=0
@@ -67,10 +67,16 @@ function fn_vmenu_init()
 fn_vmenu_actions()
 {
     local _key=$1
-    local _result=$UTL_ACT_IGNORED
+    local _result=$UTIL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_UP)
+            if ((vmenu_idx_selected == 0))
+            then
+                # user pressed up on first row so exit controller
+                util_exit_dispatcher=1
+                break
+            fi
             fn_vmenu_action_move -1
             _result=$?
             ;;
@@ -99,7 +105,6 @@ fn_vmenu_actions()
     return $_result
 }
 
-
 function fn_vmenu_set_message()
 {
     vmenu_footer_message=$1
@@ -110,6 +115,11 @@ function fn_vmenu_set_message()
         ((vmenu_height--))
         vmenu_footer_show=1
     fi
+}
+
+function fn_vmenu_set_checked()
+{
+    vmenu_ind_values=( [vmenu_idx_selected]=$BIW_CHAR_BULLET )
 }
 
 function fn_vmenu_get_current_val()
@@ -136,30 +146,34 @@ function fn_vmenu_action_move()
     if ((vmenu_idx_selected == _new_idx))
     then
         # no change
-        return $UTL_ACT_IGNORED
+        return $UTIL_ACT_IGNORED
     fi
 
+    local -i _old_idx=vmenu_idx_selected
     vmenu_idx_selected=$_new_idx
 
     if (((vmenu_idx_selected >= vmenu_idx_panel_top) 
         && (vmenu_idx_selected <= vmenu_idx_panel_end)))
     then
         # moving selection within existing bounds
-        fn_vmenu_move_selector $_relative_idx
-        return $UTL_ACT_CHANGED
+        fn_vmenu_draw_row $_old_idx
+        fn_vmenu_draw_row $vmenu_idx_selected
+
+        fn_util_debug_msg 'old_idx=%+d new_idx=%d' $_old_idx $vmenu_idx_selected
+        return $UTIL_ACT_CHANGED
     fi
 
     if((_relative_idx == -1 || _relative_idx == 1))
     then
         # use fast single row scroll
         fn_vmenu_fast_scroll $_relative_idx
-        return $UTL_ACT_CHANGED
+        return $UTIL_ACT_CHANGED
     fi
 
     # redraw entire screen
     fn_vmenu_redraw
 
-    return $UTL_ACT_CHANGED
+    return $UTIL_ACT_CHANGED
 }
 
 function fn_vmenu_fast_scroll()
@@ -178,18 +192,7 @@ function fn_vmenu_fast_scroll()
     fn_vmenu_draw_row $((vmenu_idx_panel_top + vmenu_height - 1))
 
     #fn_vmenu_redraw
-    fn_utl_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
-}
-
-function fn_vmenu_move_selector()
-{
-    local -i _direction=$1
-
-    # redraw affected rows
-    fn_vmenu_draw_row $((vmenu_idx_selected - _direction))
-    fn_vmenu_draw_row $vmenu_idx_selected
-
-    fn_utl_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
+    fn_util_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
 }
 
 function fn_vmenu_set_row_idx()
@@ -197,7 +200,7 @@ function fn_vmenu_set_row_idx()
     local -i _line_idx=$1
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
     local -i _row_pos=$((vmenu_row_pos + _abs_index))
-    fn_utl_set_cursor_pos $_row_pos 0
+    fn_util_set_cursor_pos $_row_pos 0
 }
 
 function fn_vmenu_redraw()
@@ -225,7 +228,7 @@ function fn_vmenu_redraw()
         vmenu_idx_panel_end=$vmenu_idx_last
     fi
 
-    fn_utl_debug_msg 'A=%d T=%d E=%d B=%d' \
+    fn_util_debug_msg 'A=%d T=%d E=%d B=%d' \
         $vmenu_idx_selected \
         $vmenu_idx_panel_top \
         $vmenu_idx_panel_end \
@@ -338,7 +341,7 @@ function fn_vmenu_draw_slider()
         fi
     fi
 
-    fn_utl_set_col_pos $((vmenu_width - 1))
+    fn_util_set_col_pos $((vmenu_width - 1))
     fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "$_last_char"
 }

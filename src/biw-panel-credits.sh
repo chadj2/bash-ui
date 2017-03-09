@@ -54,17 +54,10 @@ function fn_cred_show()
 
     cred_color_map_size=${#cred_color_map[@]}
 
-    fn_cred_blank_panel
+    fn_utf8_box_panel
     fn_cred_load_data
-    fn_utl_debug_print
-    
+    fn_util_debug_print
     fn_cred_print_data
-    local -i _result=$?
-
-    fn_utl_debug_msg "result: %d" $_result
-
-    # if animation was canceled then we get a non-zero status
-    return $_result
 }
 
 function fn_cred_load_data()
@@ -101,11 +94,9 @@ function fn_cred_print_data()
         if ! fn_cred_print_line "${_line_val}" $_persist_cursor
         then
             # cancel by user input
-            return $UTL_ACT_IGNORED
+            break
         fi
     done
-
-    return $UTL_ACT_CHANGED
 }
 
 function fn_cred_print_line()
@@ -141,8 +132,15 @@ function fn_cred_print_line()
 
     # start main animation loop. 
     # Elements execute asynchronously.
-    while fn_utl_process_key '_result_char' $CRED_ANIMATE_DELAY
+    while fn_util_process_key '_result_char' $CRED_ANIMATE_DELAY
     do
+        if [ $_result_char == $CSI_KEY_UP ]
+        then
+            # up key should exit the app
+            util_exit_dispatcher=1
+            break
+        fi
+
         _terminate_loop=1
 
         fn_sgr_seq_start
@@ -241,7 +239,7 @@ function fn_cred_print_alpha()
         return 1
     fi
 
-    fn_utl_set_col_pos $((_line_start + _alpha_start))
+    fn_util_set_col_pos $((_line_start + _alpha_start))
 
     local _char_val
     local -i _alpha_color
@@ -295,7 +293,7 @@ function fn_cred_print_cursor()
     local -i _cursor_pos=$((_line_start + _line_width))
     local -i _should_show=$1
 
-    fn_utl_set_col_pos $_cursor_pos
+    fn_util_set_col_pos $_cursor_pos
 
     local _sgr_color=${cred_color_map[cred_color_map_size - 1]}
     fn_cred_set_color $_sgr_color
@@ -314,46 +312,9 @@ function fn_cred_canvas_set_cursor()
     local -i _row_pos=$1
     local -i _col_pos=$2
 
-    fn_utl_set_cursor_pos \
+    fn_util_set_cursor_pos \
         $((cred_canvas_row_pos + _row_pos)) \
         $((cred_canvas_col_pos + _col_pos))
-}
-
-function fn_cred_blank_panel()
-{
-    local -i _line_idx
-
-    for((_line_idx = 0; _line_idx < cred_height; _line_idx++))
-    do
-        local -i _row_pos=$((cred_row_pos + _line_idx))
-        fn_sgr_seq_start
-
-        fn_utl_set_cursor_pos $_row_pos 0
-        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
-
-        if((_line_idx < cred_canvas_height))
-        then
-            fn_cred_blank_line
-        else
-            fn_cred_bottom_line
-        fi
-        fn_sgr_seq_flush
-    done
-}
-
-function fn_cred_blank_line()
-{
-    fn_utf8_print $BIW_CHAR_LINE_VT
-    fn_csi_print_width '' $cred_canvas_width
-    fn_utl_set_col_pos $((cred_width - 1))
-    fn_utf8_print $BIW_CHAR_LINE_VT
-}
-
-function fn_cred_bottom_line()
-{
-    fn_utf8_print $BIW_CHAR_LINE_BT_LT
-    fn_utf8_print_h_line $cred_canvas_width
-    fn_utf8_print $BIW_CHAR_LINE_BT_RT
 }
 
 

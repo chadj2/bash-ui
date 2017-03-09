@@ -30,20 +30,72 @@ declare -i hmenu_idx_redraws=0
 function fn_hmenu_init()
 {
     hmenu_data_values=("${!1}")
+    hmenu_idx_selected=${2:-0}
+
     hmenu_data_size=${#hmenu_data_values[*]}
+    hmenu_idx_last=$((hmenu_data_size - 1))
 
     # Layout
     hmenu_width=$BIW_PANEL_WIDTH
     hmenu_row_pos=0
+}
+
+function fn_hmenu_controller_sub()
+{
+    declare -a _menu_values=("${!1}")
+
+    # save the hmenu state
+    local -a _old_values=( "${hmenu_data_values[@]}" )
+    local -i _old_selected=hmenu_idx_selected
+    local _old_selected_value
+    fn_hmenu_get_current_val '_old_selected_value'
+
+    # Init the sub-menu
+    fn_hmenu_init '_menu_values[@]' -1
+    hmenu_row_pos=1
+    fn_hmenu_redraw
+
+    local _panel_msg
+    mapfile -t _panel_msg <<-EOM
     
-    hmenu_idx_selected=0
-    hmenu_idx_last=$((hmenu_data_size - 1))
+${_old_selected_value} Menu Options:
+
+[Down-Arrow]: Enter sub-menu
+[Up-Arrow] or [ESC]: Exit sub-menu
+[Enter] or [Space]: Save a selection
+[CTRL-C]: Exit application
+EOM
+
+    # fill the panel with an empty box
+    fn_utf8_box_panel '_panel_msg[@]'
+
+    # the user should use up and down keys to navigate
+    local _key
+    fn_util_process_key _key
+    case "$_key" in
+        $CSI_KEY_UP)
+            util_exit_dispatcher=1
+            ;;
+        $CSI_KEY_DOWN)
+            # user is moving into lower menu
+            hmenu_idx_selected=0
+            fn_util_dispatcher
+            ;;
+    esac
+
+    # restore old hmenu
+    fn_hmenu_init '_old_values[@]' $_old_selected
+    hmenu_row_pos=0
+
+    # allow the top menu to process the key that 
+    # could be left/right
+    fn_hmenu_actions $_key
 }
 
 fn_hmenu_actions()
 {
     local _key=$1
-    local _result=$UTL_ACT_IGNORED
+    local _result=$UTIL_ACT_IGNORED
 
     case "$_key" in
         $CSI_KEY_LEFT)
@@ -69,6 +121,12 @@ function fn_hmenu_get_current_val()
 
 function fn_hmenu_action_move()
 {
+    if((hmenu_idx_selected < 0))
+    then
+        # nothing is selected
+        return $UTIL_ACT_IGNORED
+    fi
+
     local _direction=$1
     local _new_idx=$((hmenu_idx_selected + _direction))
 
@@ -85,7 +143,7 @@ function fn_hmenu_action_move()
     if((hmenu_idx_selected == _new_idx))
     then
         # no change
-        return $UTL_ACT_IGNORED
+        return $UTIL_ACT_IGNORED
     fi
 
     hmenu_idx_selected=$_new_idx
@@ -94,7 +152,7 @@ function fn_hmenu_action_move()
     fn_hmenu_draw_item $((hmenu_idx_selected - _direction))
     fn_hmenu_draw_item $((hmenu_idx_selected))
     
-    return $UTL_ACT_CHANGED
+    return $UTIL_ACT_CHANGED
 }
 
 function fn_hmenu_redraw()
@@ -127,7 +185,7 @@ function fn_hmenu_draw_item()
 
     fn_sgr_seq_start
 
-    fn_utl_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
+    fn_util_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
     fn_theme_set_attr_panel $((_item_idx == hmenu_idx_selected))
     fn_sgr_op $SGR_ATTR_UNDERLINE
 

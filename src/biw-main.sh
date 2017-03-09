@@ -13,7 +13,7 @@
 # generate errors if unset vars are used.
 set -o nounset
 
-# global widget params
+# global panel geometry
 declare -ri BIW_MARGIN=10
 declare -ri BIW_PANEL_HEIGHT=20
 declare -ri BIW_PANEL_WIDTH=60
@@ -27,19 +27,21 @@ source ${BIW_HOME}/biw-panel-credits.sh
 
 declare -r BIW_VERSION=0.9
 
-# selected result when a panel is closed
+# a controller can set a result here when it is closed.
 declare biw_selection_result
-
-# controllers will set this when the app should terminate
-declare -i biw_terminate_app=0
 
 function fn_biw_main()
 {
     # remove any existing result file.
     rm -f $BIW_RESULT_FILE
 
-    # show the widgets
-    fn_biw_show
+    fn_util_panel_open
+    fn_theme_init
+
+    # show the panel
+    fn_biw_controller_hmenu_top
+
+    fn_util_panel_close
 
     if [ -n "$biw_selection_result" ]
     then
@@ -48,89 +50,80 @@ function fn_biw_main()
     fi
 }
 
-function fn_biw_show()
+# Entires in H-Menu
+declare -r BIW_MENU_HISTORY='History'
+declare -r BIW_MENU_BROWSE='File'
+declare -r BIW_MENU_THEME='Theme'
+declare -r BIW_MENU_HOTKEY='Hotkey'
+declare -r BIW_MENU_CREDITS='Credits'
+declare -r BIW_MENU_CONFIG='Config'
+#declare -r BIW_MENU_DEFAULT='Default'
+
+# BIW_DISPATCH_MAP: 
+# This determines what controller is invoked when an H-Menu entry is 
+# selected.
+#
+# A controller can also invoke a second-level H-Menu but regardless
+# of the level, it uses this map to determine what its menu entries
+# invoke.
+declare -A BIW_DISPATCH_MAP=(
+    [$BIW_MENU_HISTORY]=fn_biw_controller_history
+    [$BIW_MENU_BROWSE]=fn_biw_controller_browse
+    [$BIW_MENU_CONFIG]=fn_biw_controller_hmenu_config
+    [$BIW_MENU_THEME]=fn_biw_controller_cfg_theme
+    [$BIW_MENU_HOTKEY]=fn_biw_controller_hotkey
+    [$BIW_MENU_CREDITS]=fn_biw_controller_credits)
+
+
+function fn_biw_controller_hmenu_top()
 {
-
-    fn_utl_panel_open
-
-    fn_theme_init
-
-    # Entires in HMenu
-    local -r BIW_MENU_HISTORY='History'
-    local -r BIW_MENU_BROWSE='File'
-    local -r BIW_MENU_THEME='Theme'
-    local -r BIW_MENU_CREDITS='Credits'
-    local -r BIW_MENU_HOTKEY='Hotkey'
-
-    local -a _hmenu_values=(
-        $BIW_MENU_HISTORY 
-        $BIW_MENU_BROWSE 
-        $BIW_MENU_THEME
-        $BIW_MENU_HOTKEY
+    local -a _top_menu=(
+        $BIW_MENU_HISTORY
+        $BIW_MENU_BROWSE
+        $BIW_MENU_CONFIG
         $BIW_MENU_CREDITS)
 
-    fn_hmenu_init _hmenu_values[@]
+    # setup the H-Menu
+    fn_hmenu_init '_top_menu[@]'
 
-    while [ 1 ]
-    do
-        fn_hmenu_get_current_val '_menu_val'
-        fn_hmenu_redraw
-        biw_selection_result=''
-
-        case $_menu_val in
-            $BIW_MENU_HISTORY)
-                fn_ctl_history_controller
-                ;;
-            $BIW_MENU_BROWSE)
-                fn_ctl_browse_controller
-                ;;
-            $BIW_MENU_THEME)
-                fn_ctl_cfg_theme_controller
-                ;;
-            $BIW_MENU_CREDITS)
-                fn_ctl_credits_controller
-                ;;
-            $BIW_MENU_HOTKEY)
-                fn_ctl_hotkey_controller
-                ;;
-            *)
-                fn_ctl_default
-                ;;
-        esac
-
-        # terminate if controller returned action ignored status
-        if((biw_terminate_app))
-        then
-            break
-        fi
-    done
-
-    fn_utl_panel_close
+    # call the main dispatcher that will invoke the 
+    # appropriate controller.
+    fn_util_dispatcher
 }
 
-##
-# Controller: Default with no panel.
-##
-
-function fn_ctl_default()
+function fn_biw_controller_hmenu_config()
 {
-    local _key
+    # If we are at this point then it means:
+    #   1. The user selected the "Config" entry in the H-Menu.
+    #   2. The dispatcher looked up the associated controller 
+    #      in BIW_DISPATCH_MAP.
+    #   3. The dispatcher invoked this controller and is expecting
+    #      it to return when done.
 
-    while fn_utl_process_key _key
-    do
-        if [ "$_key" == $CSI_KEY_ENTER ]
-        then
-            biw_terminate_app=1
-            break
-        fi
-    done
+    local -a _config_menu=(
+        $BIW_MENU_THEME
+        $BIW_MENU_HOTKEY)
+
+    # Call the dispatcher that will handle actions 
+    # for a second-level menu
+    fn_hmenu_controller_sub '_config_menu[@]'
+
+    # If we are at this point and the user used a config panel then it means:
+    #   1. The H-Menu controller displayed the secondary menu and 
+    #      waited for the user to hit the down key.
+    #   2. If the down key was hit the H-Menu controller invoked 
+    #      a second level dispatcher which is a recursive call.
+    #   3. The dispatcher compared selected item of the secondary H-Menu and invoked
+    #      the associated controller for the panel.
+    #   4. The panel controller set the util_exit_dispatcher flag and returned.
+    #   5. The second level dispatcher caught the exit flag and returned.
 }
 
 ##
 # Controller: Hotkey configuration panel.
 ##
 
-function fn_ctl_hotkey_controller()
+function fn_biw_controller_hotkey()
 {
     local -A _bind_selections=(
         ['Arrow-Up']=$CSI_KEY_UP
@@ -150,29 +143,28 @@ function fn_ctl_hotkey_controller()
     mapfile -t _key_descr_list < <(echo "${!_bind_selections[*]}" | sort)
 
     fn_vmenu_init _key_descr_list[@]
-    fn_vmenu_set_message "Choose activation hotkey"
-
-    fn_ctl_load_hotkey_idx
+    fn_biw_load_hotkey_idx
     vmenu_idx_selected=$?
 
-    vmenu_ind_values=( [vmenu_idx_selected]=$BIW_CHAR_BULLET )
+    fn_vmenu_set_message "Choose activation hotkey"
+    fn_vmenu_set_checked
     fn_vmenu_redraw
 
     local _key
-    while fn_utl_process_key _key
+    while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
 
         case "$_key" in
             $CSI_KEY_ENTER|$CSI_KEY_SPC) 
-                fn_ctl_save_hotkey
+                fn_biw_save_hotkey
                 fn_vmenu_redraw
                 ;;
         esac
     done
 }
 
-function fn_ctl_load_hotkey_idx()
+function fn_biw_load_hotkey_idx()
 {
     # create lookups
     local -A _bind_desc_lookup=()
@@ -202,7 +194,7 @@ function fn_ctl_load_hotkey_idx()
     return $_selected_bind_idx
 }
 
-function fn_ctl_save_hotkey()
+function fn_biw_save_hotkey()
 {
     local _selected_bind_desc
     fn_vmenu_get_current_val '_selected_bind_desc'
@@ -210,9 +202,7 @@ function fn_ctl_save_hotkey()
     local _selected_bind_key=${_bind_selections[$_selected_bind_desc]}
     fn_settings_set_hotkey $_selected_bind_key
 
-    # update bullet in panel
-    vmenu_ind_values=( [vmenu_idx_selected]=$BIW_CHAR_BULLET )
-
+    fn_vmenu_set_checked
     fn_vmenu_set_message "Hotkey saved: [${_selected_bind_desc}]=${_selected_bind_key}"
 }
 
@@ -220,7 +210,7 @@ function fn_ctl_save_hotkey()
 # Controller: Credits Animation panel
 ##
 
-function fn_ctl_credits_controller()
+function fn_biw_controller_credits()
 {
     # change to matrix theme
     local -i _theme_idx=${theme_id_lookup[THEME_TYPE_MATRIX]}
@@ -241,7 +231,7 @@ function fn_ctl_credits_controller()
 # max values to load for history and file lists
 declare -ri BIW_LIST_MAX=50
 
-function fn_ctl_history_controller()
+function fn_biw_controller_history()
 {
     local _panel_command="fc -lnr -$BIW_LIST_MAX"
     local -a _values
@@ -254,14 +244,13 @@ function fn_ctl_history_controller()
 
     fn_vmenu_init _values[@]
     fn_vmenu_set_message "[ENTER] key copies to prompt"
-
     fn_vmenu_redraw
 
     local _key
-    while fn_utl_process_key _key
+    while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTL_ACT_CHANGED ]
+        if [ $? == $UTIL_ACT_CHANGED ]
         then
             # vmenu handled the action so get next key
             continue
@@ -271,7 +260,7 @@ function fn_ctl_history_controller()
             $CSI_KEY_ENTER) 
                 # we got the enter key so close the menu
                 fn_vmenu_get_current_val "biw_selection_result"
-                biw_terminate_app=1
+                util_exit_dispatcher=1
                 break
                 ;;
         esac
@@ -282,20 +271,19 @@ function fn_ctl_history_controller()
 # Controller: Theme configuration panel.
 ##
 
-function fn_ctl_cfg_theme_controller()
+function fn_biw_controller_cfg_theme()
 {
     # load theme data into menu
     fn_vmenu_init "theme_desc_lookup[@]" $theme_active_idx
     fn_vmenu_set_message "Choose default theme"
-    vmenu_ind_values=( [theme_active_idx]=$BIW_CHAR_BULLET )
-
+    fn_vmenu_set_checked
     fn_vmenu_redraw
 
     local _key
-    while fn_utl_process_key _key
+    while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTL_ACT_CHANGED ]
+        if [ $? == $UTIL_ACT_CHANGED ]
         then
             # use the vmenu index to determine the selected theme
             fn_theme_set_idx_active $vmenu_idx_selected
@@ -317,9 +305,9 @@ function fn_ctl_cfg_theme_controller()
 function fn_theme_save()
 {
     local _saved_theme=${THEME_LIST[$theme_active_idx]}
-    vmenu_ind_values=( [theme_active_idx]=$BIW_CHAR_BULLET )
-
     fn_settings_set_param $THEME_PARAM_NAME $_saved_theme
+
+    fn_vmenu_set_checked
     fn_vmenu_set_message "Theme saved: ${_saved_theme}"
 }
 

@@ -57,13 +57,52 @@ function fn_utf8_cp_print()
     fn_sgr_seq_write "$_utf8_raw"
 }
 
+function fn_utf8_box_panel()
+{
+    local _msg_ref=${1:-}
+
+    local -a _msg_array=()
+
+    if [ -n "$_msg_ref" ]
+    then
+        _msg_array=( "${!_msg_ref}" )
+    fi
+
+    local -i _msg_idx=0
+    local -i _row_idx
+    local -i _last_idx=$((BIW_PANEL_HEIGHT - 1))
+
+    for((_row_idx=hmenu_row_pos + 1; _row_idx <= _last_idx; _row_idx++))
+    do
+        fn_sgr_seq_start
+
+        fn_util_set_cursor_pos $_row_idx 0
+        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
+
+        if((_row_idx < _last_idx))
+        then
+            fn_utf8_print $BIW_CHAR_LINE_VT
+
+            local _msg_line="${_msg_array[_msg_idx++]:-}"
+            fn_csi_print_center " $_msg_line" $((BIW_PANEL_WIDTH - 2))
+            
+            fn_utf8_print $BIW_CHAR_LINE_VT
+        else
+            fn_utf8_print $BIW_CHAR_LINE_BT_LT
+            fn_utf8_print_h_line $((BIW_PANEL_WIDTH - 2))
+            fn_utf8_print $BIW_CHAR_LINE_BT_RT
+        fi
+        fn_sgr_seq_flush
+    done
+}
+
 function fn_utf8_print_h_line()
 {
     local -i _line_width=$1
     local _sgr_line
     local _pad_char=$BIW_CHAR_LINE_HZ
 
-    printf -v _sgr_line '%*s' $cred_canvas_width
+    printf -v _sgr_line '%*s' $_line_width
     printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
     fn_sgr_seq_write $_sgr_line
 }
@@ -132,7 +171,7 @@ function fn_utf8_get_encoded()
             $(( ( ${_ordinal}     &0x3f)|0x80 ))
 
     else
-        fn_utl_die "Could not convert UTF-8 ordinal: <$_ordinal>"
+        fn_util_die "Could not convert UTF-8 ordinal: <$_ordinal>"
     fi
 }
 

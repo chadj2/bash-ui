@@ -16,15 +16,15 @@ declare -r BIW_ORIG_PWD=$PWD
 # max number of files to populate in file browser
 declare -ir BIW_BROWSE_MAX_FILES=50
 
-function fn_ctl_browse_controller()
+function fn_biw_controller_browse()
 {
-    fn_ctl_browse_update
+    fn_biw_browse_update
 
     local _key
-    while fn_utl_process_key _key
+    while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTL_ACT_CHANGED ]
+        if [ $? == $UTIL_ACT_CHANGED ]
         then
             # vmenu handled the action so get next key
             continue
@@ -33,18 +33,18 @@ function fn_ctl_browse_controller()
         if [ "$_key" == $CSI_KEY_ENTER ]
         then
             # enter key was hit so update the screen
-            fn_ctl_browse_select
+            fn_biw_browse_select
             if [ $? == 1 ]
             then
                 # exit app
-                biw_terminate_app=1
+                util_exit_dispatcher=1
                 break
             fi
         fi
     done
 }
 
-function fn_ctl_browse_select()
+function fn_biw_browse_select()
 {
     local _selected_file
     fn_vmenu_get_current_val '_selected_file'
@@ -53,7 +53,7 @@ function fn_ctl_browse_select()
     then
         # we got the enter key so close the menu
         local _rel_dir
-        fn_utl_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
+        fn_util_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
         biw_selection_result="${_rel_dir}/${_selected_file}"
         return 1
     fi
@@ -66,15 +66,15 @@ function fn_ctl_browse_select()
     fi
 
     # change real directories
-    cd "$_selected_file" || fn_utl_die "Failed to change directory: $PWD"
+    cd "$_selected_file" || fn_util_die "Failed to change directory: $PWD"
 
     # update panel with new directory
-    fn_ctl_browse_update
+    fn_biw_browse_update
 
     return 0
 }
 
-function fn_ctl_browse_update()
+function fn_biw_browse_update()
 {
     # fetch files
     local -a _ls_output
@@ -122,11 +122,10 @@ function fn_ctl_browse_update()
     fi
 
     local _rel_dir
-    fn_utl_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
+    fn_util_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
 
     fn_vmenu_init _dir_view[@]
     vmenu_ind_values=( "${_dir_list_ind[@]}" "${_file_list_ind[@]:-}" )
     fn_vmenu_set_message "PWD [${_rel_dir}]"
-    
     fn_vmenu_redraw
 }
