@@ -15,6 +15,11 @@ source ${BIW_HOME}/biw-term-utf8.sh
 source ${BIW_HOME}/biw-term-sgr.sh
 source ${BIW_HOME}/biw-term-csi.sh
 
+# global panel geometry
+declare -ri BIW_MARGIN=10
+declare -i biw_panel_col_size=60
+declare -i biw_panel_row_size=20
+
 # returned by actions to indicate if the menu contents changed. 
 declare -ri UTIL_ACT_IGNORED=1
 declare -ri UTIL_ACT_CHANGED=0
@@ -29,6 +34,10 @@ declare -r UTIL_OC_ANIMATE_DELAY=0.01
 
 # controllers will set this when the app should terminate
 declare -i util_exit_dispatcher=0
+
+# settings keys
+declare -r UTIL_PARAM_PANEL_ROWS='panel-rows'
+declare -r UTIL_PARAM_PANEL_COLS='panel-cols'
 
 function fn_util_dispatcher()
 {
@@ -50,6 +59,12 @@ function fn_util_dispatcher()
 
         # invoke the controller
         $_controller
+        local -i _result=$?
+
+        if [ $_result == 127 ]
+        then
+            fn_util_die "Controller not found: ${_controller}"
+        fi
     done
 
     # exit request recieved so reset.
@@ -59,7 +74,7 @@ function fn_util_dispatcher()
 function fn_util_controller_default()
 {
     # fill the panel with an empty box
-    fn_utf8_box_panel
+    fn_util_draw_box_panel $((hmenu_row_pos + 1))
 
     local _key
     while fn_util_process_key _key
@@ -76,6 +91,7 @@ function fn_util_process_key()
 {
     local _key_ref=$1
     local _timeout=${2:-''}
+    local -i _suppress_hmenu=${3:-0}
 
     # don't print debug if we are animating something 
     if [ -z "$_timeout" ]
@@ -98,6 +114,11 @@ function fn_util_process_key()
         return $UTIL_ACT_IGNORED
     fi
 
+    if [ $_suppress_hmenu != 0 ]
+    then
+        return $UTIL_ACT_CHANGED
+    fi
+
     fn_hmenu_actions "${!_key_ref}"
     if [ $? == $UTIL_ACT_CHANGED ]
     then
@@ -116,7 +137,7 @@ function fn_util_set_cursor_pos()
     local -i _abs_col=$2
 
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_UP $((BIW_PANEL_HEIGHT - _abs_row))
+    fn_csi_op $CSI_OP_ROW_UP $((biw_panel_row_size - _abs_row))
     fn_util_set_col_pos $_abs_col
 }
 
@@ -139,6 +160,10 @@ function fn_util_panel_open()
     # could move the cursor
     stty -echo
 
+    # load size prefs
+    fn_settings_get_param "$UTIL_PARAM_PANEL_ROWS" 'biw_panel_row_size'
+    fn_settings_get_param "$UTIL_PARAM_PANEL_COLS" 'biw_panel_col_size'
+
     # hide the cursor to eliminate flicker
     fn_csi_op $CSI_OP_CURSOR_HIDE
 
@@ -154,55 +179,28 @@ function fn_util_panel_open()
 
 function fn_util_scroll_open()
 {
-    local -i _move_lines=$((sgr_cache_row_pos - BIW_PANEL_HEIGHT - 1))
+    local -i _move_lines=$((sgr_cache_row_pos - biw_panel_row_size - 1))
 
     # if we are too close to the top of the screen then we need 
     # to move down instead of scroll up.
     if((_move_lines < 0))
     then
-        fn_csi_op $CSI_OP_ROW_DOWN $BIW_PANEL_HEIGHT
+        fn_csi_op $CSI_OP_ROW_DOWN $biw_panel_row_size
 
         # update cursor position
         fn_csi_get_row_pos 'sgr_cache_row_pos'
         return
     fi
 
-    # animate open
-    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
-    do
-        fn_csi_op $CSI_OP_SCROLL_UP 1
-        fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
-    done
-
-    # non-animated open:
-    #fn_csi_op $CSI_OP_SCROLL_UP $BIW_PANEL_HEIGHT
-    #fn_biw_cursor_home
-    #fn_csi_op $CSI_OP_ROW_INSERT $BIW_PANEL_HEIGHT
+    fn_util_scroll_resize $biw_panel_row_size
 }
 
 function fn_util_panel_close()
 {
-    # position the cursor at the start of the menu
-    fn_util_set_cursor_pos 0 0
-
-    # animate close
-    for((_line_idx = 0; _line_idx < BIW_PANEL_HEIGHT; _line_idx++))
-    do
-        fn_csi_op $CSI_OP_ROW_DELETE 1
-        fn_csi_op $CSI_OP_SCROLL_DOWN 1
-        fn_csi_op $CSI_OP_ROW_DOWN 1
-        fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
-    done
-
-    # non-animate close:
-    #fn_csi_op $CSI_OP_ROW_DELETE $BIW_PANEL_HEIGHT
-    #fn_csi_op $CSI_OP_SCROLL_DOWN $BIW_PANEL_HEIGHT
+    fn_util_scroll_resize $((biw_panel_row_size*-1))
 
     # restore original cursor position
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-
-    # clear out any junk on the line
-    fn_csi_op $CSI_OP_ROW_ERASE
 
     # restore terminal settings
     fn_csi_op $CSI_OP_CURSOR_SHOW
@@ -212,6 +210,75 @@ function fn_util_panel_close()
 
     # remove panic handler
     trap - EXIT
+}
+
+function fn_util_panel_set_dims()
+{
+    local -i _rows=$1
+    local -i _cols=$2
+
+    if((_rows != biw_panel_row_size))
+    then
+        fn_settings_set_param $UTIL_PARAM_PANEL_ROWS $_rows
+        fn_util_scroll_resize $((_rows - biw_panel_row_size))
+        biw_panel_row_size=$_rows
+    fi
+
+    if((_cols != biw_panel_col_size))
+    then
+        fn_settings_set_param $UTIL_PARAM_PANEL_COLS $_cols
+        fn_util_clear_screen 0
+        biw_panel_col_size=$_cols
+    fi
+
+    fn_hmenu_redraw
+}
+
+function fn_util_scroll_resize()
+{
+    local -i _rows=$1
+
+    local -i _line_idx
+    local -i _row_count
+
+    if((_rows < 0))
+    then
+        # position the cursor at the start of the menu
+        fn_util_set_cursor_pos 0 0
+
+        _row_count=$((_rows*-1))
+
+        # animate close
+        for((_line_idx = 0; _line_idx < _row_count; _line_idx++))
+        do
+            fn_csi_op $CSI_OP_ROW_DELETE 1
+            fn_csi_op $CSI_OP_SCROLL_DOWN 1
+            fn_csi_op $CSI_OP_ROW_DOWN 1
+            fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
+        done
+
+        # clear out any junk on the line
+        fn_csi_op $CSI_OP_ROW_ERASE
+        
+        # non-animate close:
+        #fn_csi_op $CSI_OP_ROW_DELETE $biw_panel_row_size
+        #fn_csi_op $CSI_OP_SCROLL_DOWN $biw_panel_row_size
+    else
+
+        _row_count=$_rows
+
+        # animate open
+        for((_line_idx = 0; _line_idx < _row_count; _line_idx++))
+        do
+            fn_csi_op $CSI_OP_SCROLL_UP 1
+            fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
+        done
+
+        # non-animated open:
+        #fn_csi_op $CSI_OP_SCROLL_UP $biw_panel_row_size
+        #fn_biw_cursor_home
+        #fn_csi_op $CSI_OP_ROW_INSERT $biw_panel_row_size
+    fi
 }
 
 function fn_util_die()
@@ -302,4 +369,120 @@ function fn_util_get_relpath()
     _dest_path="${_dest_path%/}"
 
     printf -v $_result_ref '%s' "${_dest_path:-.}"
+}
+
+# Interpolate x coordinates
+# Parameters)
+#   1) x2: max X
+#   2) y1: min Y
+#   3) y2: max Y
+#   4) yp: point to map
+#
+# This function will map a point yp in the range [0..x2] => [y1..y2] given xp:
+#     xp = fn_util_interp_x( xp: [y1..y2] => [0..x2] )
+#
+# The points (0,y1) and (x2,y2) make a line. We determine the point (xp,yp) by 
+# calculating xp given yp. The line is defined as:
+#    (y2 - y1)/(x2 - x1) = (yp - y1)/(xp - x1)
+#
+# Setting x1=0 and solving for xp we have:
+#    xp = (x2*yp - x2*y1)/(y2 - y1)
+function fn_util_interp_x()
+{
+    local -i _x2=$1
+    local -i _y1=$2
+    local -i _y2=$3
+    local -i _yp=$4
+
+    local -i _xp_numerator=$((_x2*_yp - _x2*_y1))
+    local -i _xp_demom=$((_y2 - _y1))
+    local -i _xp_div=$((_xp_numerator / _xp_demom ))
+    return $_xp_div
+}
+
+function fn_util_draw_footer()
+{
+    local _message="$1"
+
+    fn_sgr_seq_start
+    fn_util_set_cursor_pos $biw_panel_row_size 0
+
+    fn_theme_set_attr_slider 1
+    fn_utf8_print $BIW_CHAR_LINE_BT_LT
+    fn_sgr_print ' '
+    fn_csi_print_width "$_message" $((biw_panel_col_size - 2))
+    
+    fn_sgr_seq_flush
+}
+
+function fn_util_clear_screen()
+{
+    local -i _start_row=$1
+
+    local -i _row_idx
+    local -i _last_idx=$((biw_panel_row_size - 1))
+
+    fn_sgr_seq_start
+
+    for((_row_idx=_start_row; _row_idx <= _last_idx; _row_idx++))
+    do
+        fn_util_set_cursor_pos $_row_idx 0
+        fn_theme_set_attr_panel 0
+        fn_csi_op $CSI_OP_COL_ERASE $biw_panel_col_size
+        fn_csi_op $CSI_OP_COL_FORWARD $biw_panel_col_size
+    done
+
+    fn_sgr_seq_flush
+}
+
+function fn_util_draw_box_panel()
+{
+    local -i _start_row=$1
+    local _msg_ref=${2:-}
+    local -i _theme_attr=${3:-$THEME_SET_DEF_INACTIVE}
+
+    local -a _msg_array=()
+
+    if [ -n "$_msg_ref" ]
+    then
+        _msg_array=( "${!_msg_ref}" )
+    fi
+
+    local -i _msg_idx=0
+    local -i _row_idx
+    local -i _last_idx=$((biw_panel_row_size - 1))
+
+    for((_row_idx=hmenu_row_pos + 1; _row_idx <= _last_idx; _row_idx++))
+    do
+        fn_sgr_seq_start
+
+        fn_util_set_cursor_pos $_row_idx 0
+        fn_theme_set_attr $_theme_attr
+
+        if((_row_idx < _last_idx))
+        then
+            fn_utf8_print $BIW_CHAR_LINE_VT
+
+            local _msg_line="${_msg_array[_msg_idx++]:-}"
+            fn_csi_print_center " $_msg_line" $((biw_panel_col_size - 2))
+            
+            fn_utf8_print $BIW_CHAR_LINE_VT
+        else
+            fn_utf8_print $BIW_CHAR_LINE_BT_LT
+            fn_util_print_hz_line $((biw_panel_col_size - 2))
+            fn_utf8_print $BIW_CHAR_LINE_BT_RT
+        fi
+        fn_sgr_seq_flush
+    done
+}
+
+function fn_util_print_hz_line()
+{
+    local -i _line_width=$1
+    local _sgr_line
+    local _pad_char=$BIW_CHAR_LINE_HZ
+
+    printf -v _sgr_line '%*s' $_line_width
+    printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
+    fn_sgr_seq_write $_sgr_line
 }

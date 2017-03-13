@@ -18,8 +18,8 @@ declare -i vmenu_idx_last
 declare -a vmenu_data_values
 
 # panel geometry
-declare -i vmenu_height
-declare -i vmenu_width
+declare -i vmenu_row_size
+declare -i vmenu_col_size
 declare -i vmenu_row_pos
 
 # indexes at the top and bottom of panel
@@ -52,8 +52,8 @@ function fn_vmenu_init()
 
     # Geometry
     vmenu_row_pos=$((hmenu_row_pos + 1))
-    vmenu_height=$((BIW_PANEL_HEIGHT - vmenu_row_pos))
-    vmenu_width=$BIW_PANEL_WIDTH
+    vmenu_row_size=$((biw_panel_row_size - vmenu_row_pos))
+    vmenu_col_size=$biw_panel_col_size
     vmenu_footer_show=0
 
     # panel display area defaults to the start of the list. This 
@@ -85,11 +85,11 @@ fn_vmenu_actions()
             _result=$?
             ;;
         $CSI_KEY_PG_UP)
-            fn_vmenu_action_move $((-1 * vmenu_height))
+            fn_vmenu_action_move $((-1 * vmenu_row_size))
             _result=$?
             ;;
         $CSI_KEY_PG_DOWN)
-            fn_vmenu_action_move $((vmenu_height))
+            fn_vmenu_action_move $((vmenu_row_size))
             _result=$?
             ;;
         $CSI_KEY_HOME)
@@ -112,7 +112,7 @@ function fn_vmenu_set_message()
     if((vmenu_footer_show == 0))
     then
         # make space for footer message
-        ((vmenu_height--))
+        ((vmenu_row_size--))
         vmenu_footer_show=1
     fi
 }
@@ -183,13 +183,13 @@ function fn_vmenu_fast_scroll()
     # draw the row to be scrolled to update the selection color
     fn_vmenu_draw_row $((vmenu_idx_selected - _direction)) $_direction
 
-    fn_csi_scroll_region $vmenu_row_pos $vmenu_height $_direction
+    fn_csi_scroll_region $vmenu_row_pos $vmenu_row_size $_direction
 
     ((vmenu_idx_panel_top += _direction))
     ((vmenu_idx_panel_end += _direction))
 
     fn_vmenu_draw_row $((vmenu_idx_panel_top))
-    fn_vmenu_draw_row $((vmenu_idx_panel_top + vmenu_height - 1))
+    fn_vmenu_draw_row $((vmenu_idx_panel_top + vmenu_row_size - 1))
 
     #fn_vmenu_redraw
     fn_util_debug_msg 'direction=%+d idx=%d' $_direction $vmenu_idx_selected
@@ -211,7 +211,7 @@ function fn_vmenu_redraw()
         vmenu_idx_panel_top=$vmenu_idx_selected
     fi
 
-    vmenu_idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_height - 1))
+    vmenu_idx_panel_bottom=$((vmenu_idx_panel_top + vmenu_row_size - 1))
 
     # snap window down to the active row
     if((vmenu_idx_panel_bottom < vmenu_idx_selected))
@@ -240,7 +240,10 @@ function fn_vmenu_redraw()
         fn_vmenu_draw_row $_line_idx
     done
 
-    fn_menu_draw_footer
+    if((vmenu_footer_show))
+    then
+        fn_util_draw_footer "$vmenu_footer_message"
+    fi
 
     ((vmenu_idx_redraws++))
 }
@@ -264,7 +267,7 @@ function fn_vmenu_draw_row()
     fn_menu_draw_indicator $_line_idx
     local -i _ind_width=$?
 
-    fn_vmenu_draw_selection $_line_idx $((vmenu_width - _ind_width - 1))
+    fn_vmenu_draw_selection $_line_idx $((vmenu_col_size - _ind_width - 1))
     fn_vmenu_draw_slider $((_line_idx - _slider_lookahead))
 
     fn_sgr_seq_flush
@@ -341,24 +344,8 @@ function fn_vmenu_draw_slider()
         fi
     fi
 
-    fn_util_set_col_pos $((vmenu_width - 1))
+    fn_util_set_col_pos $((vmenu_col_size - 1))
     fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "$_last_char"
 }
 
-function fn_menu_draw_footer()
-{
-    if((!vmenu_footer_show))
-    then
-        return 0
-    fi
-    fn_sgr_seq_start
-
-    fn_vmenu_set_row_idx $((vmenu_idx_panel_bottom + 1))
-    fn_theme_set_attr_slider 1
-    fn_utf8_print $BIW_CHAR_LINE_BT_LT
-    fn_sgr_print ' '
-    fn_csi_print_width "${vmenu_footer_message}" $((vmenu_width - 2))
-
-    fn_sgr_seq_flush
-}

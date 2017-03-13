@@ -10,10 +10,10 @@
 ##
 
 # Layout
-declare -ri HMENU_HEIGHT=1
+declare -ri HMENU_ROW_SIZE=1
 declare -ri HMENU_ITEM_WIDTH=10
 
-declare -i hmenu_width
+declare -i hmenu_col_size
 declare -i hmenu_row_pos
 
 # Indexes
@@ -36,7 +36,6 @@ function fn_hmenu_init()
     hmenu_idx_last=$((hmenu_data_size - 1))
 
     # Layout
-    hmenu_width=$BIW_PANEL_WIDTH
     hmenu_row_pos=0
 }
 
@@ -58,6 +57,7 @@ function fn_hmenu_controller_sub()
     local _panel_msg
     mapfile -t _panel_msg <<-EOM
     
+    
 ${_old_selected_value} Menu Options:
 
 [Down-Arrow]: Enter sub-menu
@@ -67,7 +67,7 @@ ${_old_selected_value} Menu Options:
 EOM
 
     # fill the panel with an empty box
-    fn_utf8_box_panel '_panel_msg[@]'
+    fn_util_draw_box_panel $((hmenu_row_pos + 1)) '_panel_msg[@]'
 
     # the user should use up and down keys to navigate
     local _key
@@ -161,6 +161,8 @@ function fn_hmenu_redraw()
     local -i _total_width=0
     local -i _print_width
 
+    hmenu_col_size=$biw_panel_col_size
+
     for((_item_idx = 0; _item_idx < hmenu_data_size; _item_idx++))
     do
         fn_hmenu_draw_item $_item_idx
@@ -172,7 +174,7 @@ function fn_hmenu_redraw()
     fn_sgr_seq_start
     fn_theme_set_attr $THEME_SET_DEF_INACTIVE
     fn_sgr_op $SGR_ATTR_UNDERLINE
-    fn_sgr_print_pad '' $((hmenu_width - _total_width))
+    fn_sgr_print_pad '' $((hmenu_col_size - _total_width))
     fn_sgr_seq_flush
 
     ((hmenu_idx_redraws++))

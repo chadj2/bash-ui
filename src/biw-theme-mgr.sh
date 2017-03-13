@@ -216,14 +216,6 @@ function fn_theme_set_attr()
 {
     local -i _set_name=$1
 
-
-    # handle nested sgr transaction
-    local -i _bg_sgr_nested=$((!sgr_buffer_active))
-    if((_bg_sgr_nested))
-    then
-        fn_sgr_seq_start
-    fi
-
     fn_sgr_op $SGR_ATTR_DEFAULT
 
     local -i _bg_color=${theme_active_data[THEME_CFG_BG_COLOR]}
@@ -242,12 +234,6 @@ function fn_theme_set_attr()
 
     fn_theme_set_color $SGR_ATTR_BG $_bg_color
     fn_theme_set_color $SGR_ATTR_FG $_fg_color
-
-    # handle nested sgr transaction
-    if((_bg_sgr_nested))
-    then
-        fn_sgr_seq_flush
-    fi
 }
 
 function fn_theme_set_color()

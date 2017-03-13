@@ -24,11 +24,6 @@ function fn_biw_controller_browse()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTIL_ACT_CHANGED ]
-        then
-            # vmenu handled the action so get next key
-            continue
-        fi
 
         if [ "$_key" == $CSI_KEY_ENTER ]
         then

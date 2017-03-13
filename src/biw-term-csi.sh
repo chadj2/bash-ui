@@ -199,7 +199,7 @@ function fn_csi_scroll_region()
     local -i _direction=$3
 
     # set the scrolling bounds
-    local -i _abs_top=$((sgr_cache_row_pos - BIW_PANEL_HEIGHT + _start_row))
+    local -i _abs_top=$((sgr_cache_row_pos - biw_panel_row_size + _start_row))
     local -i _abs_bottom=$((_abs_top + _region_height - 1))
 
     # set the scrolling bounds

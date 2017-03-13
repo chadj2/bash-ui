@@ -13,17 +13,13 @@
 # generate errors if unset vars are used.
 set -o nounset
 
-# global panel geometry
-declare -ri BIW_MARGIN=10
-declare -ri BIW_PANEL_HEIGHT=20
-declare -ri BIW_PANEL_WIDTH=60
-
 source ${BIW_HOME}/biw-util.sh
 source ${BIW_HOME}/biw-theme-mgr.sh
 source ${BIW_HOME}/biw-panel-hmenu.sh
 source ${BIW_HOME}/biw-panel-vmenu.sh
 source ${BIW_HOME}/biw-panel-browse.sh
 source ${BIW_HOME}/biw-panel-credits.sh
+source ${BIW_HOME}/biw-panel-slider.sh
 
 declare -r BIW_VERSION=0.9
 
@@ -56,6 +52,7 @@ declare -r BIW_MENU_BROWSE='File'
 declare -r BIW_MENU_THEME='Theme'
 declare -r BIW_MENU_HOTKEY='Hotkey'
 declare -r BIW_MENU_CREDITS='Credits'
+declare -r BIW_MENU_DIMENSIONS='Dims'
 declare -r BIW_MENU_CONFIG='Config'
 #declare -r BIW_MENU_DEFAULT='Default'
 
@@ -69,11 +66,11 @@ declare -r BIW_MENU_CONFIG='Config'
 declare -A BIW_DISPATCH_MAP=(
     [$BIW_MENU_HISTORY]=fn_biw_controller_history
     [$BIW_MENU_BROWSE]=fn_biw_controller_browse
-    [$BIW_MENU_CONFIG]=fn_biw_controller_hmenu_config
+    [$BIW_MENU_CREDITS]=fn_biw_controller_credits
+    [$BIW_MENU_CONFIG]=fn_biw_controller_cfg_hmenu
     [$BIW_MENU_THEME]=fn_biw_controller_cfg_theme
-    [$BIW_MENU_HOTKEY]=fn_biw_controller_hotkey
-    [$BIW_MENU_CREDITS]=fn_biw_controller_credits)
-
+    [$BIW_MENU_HOTKEY]=fn_biw_controller_cfg_hotkey
+    [$BIW_MENU_DIMENSIONS]=fn_biw_controller_cfg_dims)
 
 function fn_biw_controller_hmenu_top()
 {
@@ -91,7 +88,7 @@ function fn_biw_controller_hmenu_top()
     fn_util_dispatcher
 }
 
-function fn_biw_controller_hmenu_config()
+function fn_biw_controller_cfg_hmenu()
 {
     # If we are at this point then it means:
     #   1. The user selected the "Config" entry in the H-Menu.
@@ -102,6 +99,7 @@ function fn_biw_controller_hmenu_config()
 
     local -a _config_menu=(
         $BIW_MENU_THEME
+        $BIW_MENU_DIMENSIONS
         $BIW_MENU_HOTKEY)
 
     # Call the dispatcher that will handle actions 
@@ -123,7 +121,7 @@ function fn_biw_controller_hmenu_config()
 # Controller: Hotkey configuration panel.
 ##
 
-function fn_biw_controller_hotkey()
+function fn_biw_controller_cfg_hotkey()
 {
     local -A _bind_selections=(
         ['Arrow-Up']=$CSI_KEY_UP
@@ -143,7 +141,7 @@ function fn_biw_controller_hotkey()
     mapfile -t _key_descr_list < <(echo "${!_bind_selections[*]}" | sort)
 
     fn_vmenu_init _key_descr_list[@]
-    fn_biw_load_hotkey_idx
+    fn_biw_cfg_hotkey_load
     vmenu_idx_selected=$?
 
     fn_vmenu_set_message "Choose activation hotkey"
@@ -157,14 +155,14 @@ function fn_biw_controller_hotkey()
 
         case "$_key" in
             $CSI_KEY_ENTER|$CSI_KEY_SPC) 
-                fn_biw_save_hotkey
+                fn_biw_cfg_hotkey_save
                 fn_vmenu_redraw
                 ;;
         esac
     done
 }
 
-function fn_biw_load_hotkey_idx()
+function fn_biw_cfg_hotkey_load()
 {
     # create lookups
     local -A _bind_desc_lookup=()
@@ -194,7 +192,7 @@ function fn_biw_load_hotkey_idx()
     return $_selected_bind_idx
 }
 
-function fn_biw_save_hotkey()
+function fn_biw_cfg_hotkey_save()
 {
     local _selected_bind_desc
     fn_vmenu_get_current_val '_selected_bind_desc'
@@ -250,11 +248,6 @@ function fn_biw_controller_history()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTIL_ACT_CHANGED ]
-        then
-            # vmenu handled the action so get next key
-            continue
-        fi
 
         case "$_key" in
             $CSI_KEY_ENTER) 
@@ -293,7 +286,7 @@ function fn_biw_controller_cfg_theme()
 
         case "$_key" in
             $CSI_KEY_ENTER|$CSI_KEY_SPC) 
-                fn_theme_save
+                fn_biw_cfg_theme_save
                 fn_vmenu_redraw
                 ;;
         esac
@@ -302,13 +295,89 @@ function fn_biw_controller_cfg_theme()
     fn_theme_load
 }
 
-function fn_theme_save()
+function fn_biw_cfg_theme_save()
 {
     local _saved_theme=${THEME_LIST[$theme_active_idx]}
     fn_settings_set_param $THEME_PARAM_NAME $_saved_theme
 
     fn_vmenu_set_checked
     fn_vmenu_set_message "Theme saved: ${_saved_theme}"
+}
+
+##
+# Controller: Dimensions Configuration
+##
+
+declare -i biw_dims_save_pending
+
+function fn_biw_controller_cfg_dims()
+{
+    biw_dims_save_pending=0
+
+    declare -a slider_ctl_width=(
+        [$SLIDER_CTL_ATTR_LABEL]='Width'
+        [$SLIDER_CTL_ATTR_MIN]=40
+        [$SLIDER_CTL_ATTR_MAX]=80
+        [$SLIDER_CTL_ATTR_VAL]=$biw_panel_col_size
+        )
+
+    declare -a slider_ctl_height=(
+        [$SLIDER_CTL_ATTR_LABEL]='Height'
+        [$SLIDER_CTL_ATTR_MIN]=8
+        [$SLIDER_CTL_ATTR_MAX]=40
+        [$SLIDER_CTL_ATTR_VAL]=$biw_panel_row_size
+        )
+
+    local -a _slider_list=(
+        slider_ctl_width
+        slider_ctl_height )
+
+    fn_slider_init '_slider_list[@]'
+    fn_slider_redraw
+    fn_util_draw_footer 'Set Panel Dimensions'
+
+    local _key
+
+    # we add a condition to fn_util_process_key so that it enable the hmenu
+    # only when no slider controls are active.
+    while fn_util_process_key _key '' $((slider_ctl_selected_idx >= 0))
+    do
+        fn_slider_actions "$_key"
+        if [ $? == $UTIL_ACT_CHANGED ]
+        then
+            # action handled so get next key
+            if((!biw_dims_save_pending))
+            then
+                fn_util_draw_footer 'Hit [Enter] or [Space] to save; [ESC] to cancel.'
+                biw_dims_save_pending=1
+            fi
+            continue
+        fi
+
+        case "$_key" in
+            $CSI_KEY_ENTER|$CSI_KEY_SPC)
+                fn_biw_cfg_dims_save
+                ;;
+        esac
+    done
+}
+
+function fn_biw_cfg_dims_save()
+{
+    if((!biw_dims_save_pending))
+    then
+        return
+    fi
+
+    local -i _rows=${slider_ctl_height[$SLIDER_CTL_ATTR_VAL]}
+    local -i _cols=${slider_ctl_width[$SLIDER_CTL_ATTR_VAL]}
+
+    fn_util_panel_set_dims $_rows $_cols
+
+    fn_slider_redraw
+    fn_util_draw_footer 'Changes saved to settings file.'
+    
+    biw_dims_save_pending=0
 }
 
 # entry point

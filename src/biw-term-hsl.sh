@@ -35,7 +35,7 @@ declare -ir HSL216_TABLE_SIZE=$((HSL216_HUE_SIZE * HSL216_SAT_SIZE * HSL216_LIGH
 #   3) y2: max Y
 #   4) xp: point to map
 #
-# This function will map a point yp in the range [0..x2] => [y1..y2] given xp:
+# This function will map a point yp in the range [0..x2] => [y1..y2] given yp:
 #     yp = fn_hsl_interp_y( xp: [0..x2] => [y1..y2] )
 #
 # The points (0,y1) and (x2,y2) make a line. We determine the point (xp,yp) by 

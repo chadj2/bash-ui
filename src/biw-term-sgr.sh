@@ -85,7 +85,7 @@ function fn_csi_print_center()
     local _out_trim="${_out:0:${_line_width}}"
     local -i _out_size=${#_out_trim}
 
-    local _pad_chars=$(( (_line_width - _out_size)/2 ))
+    local _pad_chars=$(( (_line_width - _out_size + 1)/2 ))
     fn_csi_op $CSI_OP_COL_ERASE $_pad_chars
     fn_csi_op $CSI_OP_COL_FORWARD $_pad_chars
     ((_line_width -= _pad_chars))

@@ -9,7 +9,6 @@
 # Description:  Configuration settings load/save.
 ##
 
-
 # file for persisting theme
 declare -r BIW_SETTINGS_FILE=$HOME/.biw_settings
 
@@ -94,7 +93,9 @@ function fn_settings_save()
     local _key
     local _value
 
-    for _key in "${!biw_settings_params[@]}"
+    local IFS=$'\n'
+    
+    for _key in $(echo "${!biw_settings_params[*]}" | sort)
     do
         _value="${biw_settings_params[$_key]}"
         printf '%s=%s\n' $_key "$_value"

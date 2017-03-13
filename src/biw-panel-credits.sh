@@ -35,9 +35,9 @@ declare -a cred_alpha_map
 function fn_cred_show()
 {
     # Panel geometry
-    cred_height=$((BIW_PANEL_HEIGHT - HMENU_HEIGHT))
-    cred_width=$BIW_PANEL_WIDTH
-    cred_row_pos=$HMENU_HEIGHT
+    cred_height=$((biw_panel_row_size - HMENU_ROW_SIZE))
+    cred_width=$biw_panel_col_size
+    cred_row_pos=$HMENU_ROW_SIZE
 
     # geometry of drawing canvas
     cred_canvas_row_pos=$cred_row_pos
@@ -54,7 +54,7 @@ function fn_cred_show()
 
     cred_color_map_size=${#cred_color_map[@]}
 
-    fn_utf8_box_panel
+    fn_util_draw_box_panel $cred_row_pos
     fn_cred_load_data
     fn_util_debug_print
     fn_cred_print_data

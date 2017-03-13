@@ -21,6 +21,8 @@ function fn_utf8_init()
     fn_utf8_set_readonly BIW_CHAR_LINE_VT       0x2502
     fn_utf8_set_readonly BIW_CHAR_LINE_BT_LT    0x2514
     fn_utf8_set_readonly BIW_CHAR_LINE_BT_RT    0x2518
+    fn_utf8_set_readonly BIW_CHAR_LINE_T_LT     0x251C
+    fn_utf8_set_readonly BIW_CHAR_LINE_T_RT     0x2524
     fn_utf8_set_readonly BIW_CHAR_LINE_T_TOP    0x252C
     fn_utf8_set_readonly BIW_CHAR_LINE_T_BT     0x2534
     fn_utf8_set_readonly BIW_CHAR_BLOCK         0x2592
@@ -42,10 +44,16 @@ function fn_utf8_set()
 function fn_utf8_print()
 {
     local _utf8_encoded=$1
-    local _utf8_raw
+    local _repeat=${2:-1}
 
+    local _utf8_raw
     printf -v _utf8_raw '%b' $_utf8_encoded
-    fn_sgr_seq_write "$_utf8_raw"
+
+    local -i _count
+    for((_count = 0; _count < _repeat; _count++))
+    do
+        fn_sgr_seq_write "$_utf8_raw"
+    done
 }
 
 function fn_utf8_cp_print()
@@ -54,57 +62,7 @@ function fn_utf8_cp_print()
     local _utf8_raw
 
     fn_utf8_get_encoded _utf8_raw $_ordinal
-    fn_sgr_seq_write "$_utf8_raw"
-}
-
-function fn_utf8_box_panel()
-{
-    local _msg_ref=${1:-}
-
-    local -a _msg_array=()
-
-    if [ -n "$_msg_ref" ]
-    then
-        _msg_array=( "${!_msg_ref}" )
-    fi
-
-    local -i _msg_idx=0
-    local -i _row_idx
-    local -i _last_idx=$((BIW_PANEL_HEIGHT - 1))
-
-    for((_row_idx=hmenu_row_pos + 1; _row_idx <= _last_idx; _row_idx++))
-    do
-        fn_sgr_seq_start
-
-        fn_util_set_cursor_pos $_row_idx 0
-        fn_theme_set_attr $THEME_SET_DEF_INACTIVE
-
-        if((_row_idx < _last_idx))
-        then
-            fn_utf8_print $BIW_CHAR_LINE_VT
-
-            local _msg_line="${_msg_array[_msg_idx++]:-}"
-            fn_csi_print_center " $_msg_line" $((BIW_PANEL_WIDTH - 2))
-            
-            fn_utf8_print $BIW_CHAR_LINE_VT
-        else
-            fn_utf8_print $BIW_CHAR_LINE_BT_LT
-            fn_utf8_print_h_line $((BIW_PANEL_WIDTH - 2))
-            fn_utf8_print $BIW_CHAR_LINE_BT_RT
-        fi
-        fn_sgr_seq_flush
-    done
-}
-
-function fn_utf8_print_h_line()
-{
-    local -i _line_width=$1
-    local _sgr_line
-    local _pad_char=$BIW_CHAR_LINE_HZ
-
-    printf -v _sgr_line '%*s' $_line_width
-    printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
-    fn_sgr_seq_write $_sgr_line
+    fn_utf8_print "$_utf8_raw"
 }
 
 function fn_utf8_set_readonly()
