@@ -292,6 +292,22 @@ function fn_util_die()
     exit 1
 }
 
+function fn_util_assert_equals()
+{
+    local var1_ref=$1
+    local var2_ref=$2
+    local var1="${!var1_ref}"
+    local var2="${!var2_ref}"
+
+    if [ "${var1}" != "${var2}" ]
+    then
+        local _msg
+        printf -v '_msg' '"Assert failed! %s(%s) != %s(%s)' \
+            "$var1_ref" "$var1" "$var2_ref" "$var2"
+        fn_util_die "$_msg"
+    fi
+}
+
 function fn_util_panic()
 {
     set +x
