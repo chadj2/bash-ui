@@ -1,12 +1,12 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-themes.sh
-# Description:  Theme templates used by biw-theme-mgr.sh
+# File:         bui-themes.sh
+# Description:  Theme templates used by bui-theme-mgr.sh
 ##
 
 # There are 3 color spaces that can be used:

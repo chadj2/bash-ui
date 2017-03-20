@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 # 
-# File:         biw-panel-hmenu.sh
+# File:         bui-panel-hmenu.sh
 # Description:  Panel for horizontal menu.
 ##
 
@@ -161,7 +161,7 @@ function fn_hmenu_redraw()
     local -i _total_width=0
     local -i _print_width
 
-    hmenu_col_size=$biw_panel_col_size
+    hmenu_col_size=$bui_panel_col_size
 
     for((_item_idx = 0; _item_idx < hmenu_data_size; _item_idx++))
     do

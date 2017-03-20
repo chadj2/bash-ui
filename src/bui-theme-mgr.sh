@@ -1,15 +1,15 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-theme-mgr.sh
+# File:         bui-theme-mgr.sh
 # Description:  Manage SGR attributes based on display themes.
 ##
 
-source ${BIW_HOME}/biw-term-hsl.sh
+source ${BUI_HOME}/bui-term-hsl.sh
 
 # Theme description
 declare -r THEME_CFG_DESC=1
@@ -37,7 +37,7 @@ declare -r THEME_CFG_SLA_ATTR=51
 declare -ri THEME_CFG_HSL_BASE=100
 declare -ri THEME_ATTR_INVERT=$((THEME_CFG_HSL_BASE + 1))
 
-source ${BIW_HOME}/biw-themes.sh
+source ${BUI_HOME}/bui-themes.sh
 
 # Options for setting theme attributes
 declare -ri THEME_SET_DEF_INACTIVE=20

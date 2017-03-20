@@ -1,24 +1,24 @@
 
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-panel-browse.sh
+# File:         bui-panel-browse.sh
 # Description:  File browser panel.
 ##
 
 # used so we can generate a relative path
-declare -r BIW_ORIG_PWD=$PWD
+declare -r BUI_ORIG_PWD=$PWD
 
 # max number of files to populate in file browser
-declare -ir BIW_BROWSE_MAX_FILES=50
+declare -ir BUI_BROWSE_MAX_FILES=50
 
-function fn_biw_controller_browse()
+function fn_bui_controller_browse()
 {
-    fn_biw_browse_update
+    fn_bui_browse_update
 
     local _key
     while fn_util_process_key _key
@@ -28,7 +28,7 @@ function fn_biw_controller_browse()
         if [ "$_key" == $CSI_KEY_ENTER ]
         then
             # enter key was hit so update the screen
-            fn_biw_browse_select
+            fn_bui_browse_select
             if [ $? == 1 ]
             then
                 # exit app
@@ -39,7 +39,7 @@ function fn_biw_controller_browse()
     done
 }
 
-function fn_biw_browse_select()
+function fn_bui_browse_select()
 {
     local _selected_file
     fn_vmenu_get_current_val '_selected_file'
@@ -48,8 +48,8 @@ function fn_biw_browse_select()
     then
         # we got the enter key so close the menu
         local _rel_dir
-        fn_util_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
-        biw_selection_result="${_rel_dir}/${_selected_file}"
+        fn_util_get_relpath '_rel_dir' "$BUI_ORIG_PWD" "$PWD"
+        bui_selection_result="${_rel_dir}/${_selected_file}"
         return 1
     fi
 
@@ -64,19 +64,19 @@ function fn_biw_browse_select()
     cd "$_selected_file" || fn_util_die "Failed to change directory: $PWD"
 
     # update panel with new directory
-    fn_biw_browse_update
+    fn_bui_browse_update
 
     return 0
 }
 
-function fn_biw_browse_update()
+function fn_bui_browse_update()
 {
     # fetch files
     local -a _ls_output
     local -r _ls_command="/bin/ls -a -p -1"
 
     # read ls command results into an array
-    mapfile -n$BIW_BROWSE_MAX_FILES -s1 -t _ls_output < <($_ls_command)
+    mapfile -n$BUI_BROWSE_MAX_FILES -s1 -t _ls_output < <($_ls_command)
 
     local -a _file_list=()
     local -a _file_list_ind=()
@@ -96,16 +96,16 @@ function fn_biw_browse_update()
 
             if [ ! -x "$_file" ]
             then
-                _dir_list_ind+=( $BIW_CHAR_DBL_EXCL )
+                _dir_list_ind+=( $BUI_CHAR_DBL_EXCL )
             elif [ "$_file" == '../' ]
             then
-                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_LT )
+                _dir_list_ind+=( $BUI_CHAR_TRIANGLE_LT )
             else 
-                _dir_list_ind+=( $BIW_CHAR_TRIANGLE_RT )
+                _dir_list_ind+=( $BUI_CHAR_TRIANGLE_RT )
             fi
         else
             _file_list+=( "$_file" )
-            _file_list_ind+=( $BIW_CHAR_BULLET )
+            _file_list_ind+=( $BUI_CHAR_BULLET )
         fi
     done
 
@@ -117,7 +117,7 @@ function fn_biw_browse_update()
     fi
 
     local _rel_dir
-    fn_util_get_relpath '_rel_dir' "$BIW_ORIG_PWD" "$PWD"
+    fn_util_get_relpath '_rel_dir' "$BUI_ORIG_PWD" "$PWD"
 
     fn_vmenu_init _dir_view[@]
     vmenu_ind_values=( "${_dir_list_ind[@]}" "${_file_list_ind[@]:-}" )

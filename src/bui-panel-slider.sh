@@ -1,12 +1,12 @@
 ###!/bin/bash
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-panel-slider.sh
+# File:         bui-panel-slider.sh
 # Description:  Panel that displays a set of slider controls.
 ##
 
@@ -87,9 +87,9 @@ function fn_slider_redraw()
     fn_util_clear_screen $slider_panel_row_pos
 
     # calculate slider position
-    slider_canvas_col_pos=$(( (biw_panel_col_size - SLIDER_CANVAS_COL_SIZE)/2 ))
+    slider_canvas_col_pos=$(( (bui_panel_col_size - SLIDER_CANVAS_COL_SIZE)/2 ))
 
-    slider_panel_row_size=$((biw_panel_row_size - hmenu_row_pos - 1))
+    slider_panel_row_size=$((bui_panel_row_size - hmenu_row_pos - 1))
     slider_canvas_row_size=$((slider_ctl_count*SLIDER_CTL_ROW_SIZE))
     slider_canvas_row_pos=$(( (slider_panel_row_size - slider_canvas_row_size)/2 ))
 
@@ -266,35 +266,35 @@ function fn_slider_draw_ctl_bar()
     local -i _active=$3
     
     fn_theme_set_attr_panel $_active
-    fn_utf8_print $BIW_CHAR_TRIANGLE_LT
+    fn_utf8_print $BUI_CHAR_TRIANGLE_LT
 
     # leading space
     fn_theme_set_attr_panel 0
     if((_position_idx == 0))
     then
-        fn_utf8_print $BIW_CHAR_LINE_VT
+        fn_utf8_print $BUI_CHAR_LINE_VT
     else
-        fn_utf8_print $BIW_CHAR_LINE_T_LT
+        fn_utf8_print $BUI_CHAR_LINE_T_LT
     fi
 
-    fn_utf8_print $BIW_CHAR_LINE_HZ $((_position_idx))
+    fn_utf8_print $BUI_CHAR_LINE_HZ $((_position_idx))
 
     fn_theme_set_attr_panel $_active
     fn_sgr_print '('
     fn_sgr_print ')'
 
     fn_theme_set_attr_panel 0
-    fn_utf8_print $BIW_CHAR_LINE_HZ $((_position_max - _position_idx))
+    fn_utf8_print $BUI_CHAR_LINE_HZ $((_position_max - _position_idx))
 
     # trailing space
     if((_position_idx == _position_max))
     then
-        fn_utf8_print $BIW_CHAR_LINE_VT
+        fn_utf8_print $BUI_CHAR_LINE_VT
     else
         fn_theme_set_attr_panel 0
-        fn_utf8_print $BIW_CHAR_LINE_T_RT
+        fn_utf8_print $BUI_CHAR_LINE_T_RT
     fi
 
     fn_theme_set_attr_panel $_active
-    fn_utf8_print $BIW_CHAR_TRIANGLE_RT
+    fn_utf8_print $BUI_CHAR_TRIANGLE_RT
 }

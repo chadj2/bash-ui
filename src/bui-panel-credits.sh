@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-panel-credits.sh
+# File:         bui-panel-credits.sh
 # Description:  Panel for animated credits.
 ##
 
@@ -23,8 +23,8 @@ declare -i cred_canvas_height
 function fn_cred_show()
 {
     # Panel geometry
-    cred_height=$((biw_panel_row_size - HMENU_ROW_SIZE))
-    cred_width=$biw_panel_col_size
+    cred_height=$((bui_panel_row_size - HMENU_ROW_SIZE))
+    cred_width=$bui_panel_col_size
     cred_row_pos=$HMENU_ROW_SIZE
 
     cred_canvas_col_pos=1
@@ -58,21 +58,21 @@ function fn_sprite_buf_init()
 
     mapfile -n${cred_height} -t sprite_buf_data <<-EOM
 
-BIW - Bash Inline Widgets
+BUI - Bash User Interface
 
-Version ${BIW_VERSION}
+Version ${BUI_VERSION}
 Copyright 2017 by Chad Juliano
 chadj@pobox.com
 
 Find it at:
-https://github.com/chadj2/biw-tools
+https://github.com/chadj2/bash-ui
 EOM
 
-    mapfile -n${cred_height} -t sprite_buf_data <<-EOM
-X1234567890123456789012345678901234567890
+#     mapfile -n${cred_height} -t sprite_buf_data <<-EOM
+# X1234567890123456789012345678901234567890
 
-X12345678901234567890
-EOM
+# X12345678901234567890
+# EOM
 
     # center text in buffer
     sprite_buf_size=${#sprite_buf_data[*]}

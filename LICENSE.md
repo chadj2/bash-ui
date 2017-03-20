@@ -1,4 +1,4 @@
-BIW-TOOLS - Bash Inline Widgets
+BASH-UI - Bash User Interface Tools
 Copyright 2017 by Chad Juliano
 
 @license LGPL-3.0 <https://spdx.org/licenses/LGPL-3.0>

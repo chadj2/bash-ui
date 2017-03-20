@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-panel-vmenu.sh
+# File:         bui-panel-vmenu.sh
 # Description:  Display a scrollable vertical menu.
 ##
 
@@ -52,8 +52,8 @@ function fn_vmenu_init()
 
     # Geometry
     vmenu_row_pos=$((hmenu_row_pos + 1))
-    vmenu_row_size=$((biw_panel_row_size - vmenu_row_pos))
-    vmenu_col_size=$biw_panel_col_size
+    vmenu_row_size=$((bui_panel_row_size - vmenu_row_pos))
+    vmenu_col_size=$bui_panel_col_size
     vmenu_footer_show=0
 
     # panel display area defaults to the start of the list. This 
@@ -119,7 +119,7 @@ function fn_vmenu_set_message()
 
 function fn_vmenu_set_checked()
 {
-    vmenu_ind_values=( [vmenu_idx_selected]=$BIW_CHAR_BULLET )
+    vmenu_ind_values=( [vmenu_idx_selected]=$BUI_CHAR_BULLET )
 }
 
 function fn_vmenu_get_current_val()
@@ -325,22 +325,22 @@ function fn_vmenu_draw_slider()
         # Top charachter
         if ((_line_idx == 0))
         then
-            fn_utf8_set _last_char $BIW_CHAR_LINE_T_TOP
+            fn_utf8_set _last_char $BUI_CHAR_LINE_T_TOP
         else
-            fn_utf8_set _last_char $BIW_CHAR_TRIANGLE_UP
+            fn_utf8_set _last_char $BUI_CHAR_TRIANGLE_UP
         fi
     elif ((_line_idx < vmenu_idx_panel_end))
     then
-        fn_utf8_set _last_char $BIW_CHAR_LINE_VT
+        fn_utf8_set _last_char $BUI_CHAR_LINE_VT
 
     elif ((_line_idx == vmenu_idx_panel_end))
     then
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            fn_utf8_set _last_char $BIW_CHAR_LINE_T_BT
+            fn_utf8_set _last_char $BUI_CHAR_LINE_T_BT
         else
-            fn_utf8_set _last_char $BIW_CHAR_TRIANGLE_DN
+            fn_utf8_set _last_char $BUI_CHAR_TRIANGLE_DN
         fi
     fi
 

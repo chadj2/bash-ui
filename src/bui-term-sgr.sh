@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-term-sgr.sh
+# File:         bui-term-sgr.sh
 # Description:  Send terminal control SGR sequences to set text colors and
 #               attributes. 
 ##

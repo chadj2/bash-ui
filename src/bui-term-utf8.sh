@@ -1,36 +1,36 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-term-decg.sh
+# File:         bui-term-decg.sh
 # Description:  Send UTF-8 characters.
 ##
 
 # UTF-8 codepoints are cached as encoded values.
 function fn_utf8_init()
 {
-    fn_utf8_set_readonly BIW_CHAR_QUOTE_LT      0x00AB
-    fn_utf8_set_readonly BIW_CHAR_QUOTE_RT      0x00BB
-    fn_utf8_set_readonly BIW_CHAR_BULLET        0x2022
-    fn_utf8_set_readonly BIW_CHAR_DBL_EXCL      0x203C
-    fn_utf8_set_readonly BIW_CHAR_CHECK         0x221A
-    fn_utf8_set_readonly BIW_CHAR_LINE_HZ       0x2500
-    fn_utf8_set_readonly BIW_CHAR_LINE_VT       0x2502
-    fn_utf8_set_readonly BIW_CHAR_LINE_BT_LT    0x2514
-    fn_utf8_set_readonly BIW_CHAR_LINE_BT_RT    0x2518
-    fn_utf8_set_readonly BIW_CHAR_LINE_T_LT     0x251C
-    fn_utf8_set_readonly BIW_CHAR_LINE_T_RT     0x2524
-    fn_utf8_set_readonly BIW_CHAR_LINE_T_TOP    0x252C
-    fn_utf8_set_readonly BIW_CHAR_LINE_T_BT     0x2534
-    fn_utf8_set_readonly BIW_CHAR_BLOCK         0x2592
-    fn_utf8_set_readonly BIW_CHAR_TRIANGLE_UP   0x25B2
-    fn_utf8_set_readonly BIW_CHAR_TRIANGLE_RT   0x25BA
-    fn_utf8_set_readonly BIW_CHAR_TRIANGLE_DN   0x25BC
-    fn_utf8_set_readonly BIW_CHAR_TRIANGLE_LT   0x25C4
-    fn_utf8_set_readonly BIW_CHAR_DIAMOND       0x25C6
+    fn_utf8_set_readonly BUI_CHAR_QUOTE_LT      0x00AB
+    fn_utf8_set_readonly BUI_CHAR_QUOTE_RT      0x00BB
+    fn_utf8_set_readonly BUI_CHAR_BULLET        0x2022
+    fn_utf8_set_readonly BUI_CHAR_DBL_EXCL      0x203C
+    fn_utf8_set_readonly BUI_CHAR_CHECK         0x221A
+    fn_utf8_set_readonly BUI_CHAR_LINE_HZ       0x2500
+    fn_utf8_set_readonly BUI_CHAR_LINE_VT       0x2502
+    fn_utf8_set_readonly BUI_CHAR_LINE_BT_LT    0x2514
+    fn_utf8_set_readonly BUI_CHAR_LINE_BT_RT    0x2518
+    fn_utf8_set_readonly BUI_CHAR_LINE_T_LT     0x251C
+    fn_utf8_set_readonly BUI_CHAR_LINE_T_RT     0x2524
+    fn_utf8_set_readonly BUI_CHAR_LINE_T_TOP    0x252C
+    fn_utf8_set_readonly BUI_CHAR_LINE_T_BT     0x2534
+    fn_utf8_set_readonly BUI_CHAR_BLOCK         0x2592
+    fn_utf8_set_readonly BUI_CHAR_TRIANGLE_UP   0x25B2
+    fn_utf8_set_readonly BUI_CHAR_TRIANGLE_RT   0x25BA
+    fn_utf8_set_readonly BUI_CHAR_TRIANGLE_DN   0x25BC
+    fn_utf8_set_readonly BUI_CHAR_TRIANGLE_LT   0x25C4
+    fn_utf8_set_readonly BUI_CHAR_DIAMOND       0x25C6
 }
 
 function fn_utf8_set()

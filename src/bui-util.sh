@@ -1,24 +1,26 @@
 ##
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-controller.sh
+# File:         bui-controller.sh
 # Description:  Controller functions for vmenu panels
 ##
 
-source ${BIW_HOME}/biw-settings.sh
-source ${BIW_HOME}/biw-term-utf8.sh
-source ${BIW_HOME}/biw-term-sgr.sh
-source ${BIW_HOME}/biw-term-csi.sh
+source ${BUI_HOME}/bui-settings.sh
+source ${BUI_HOME}/bui-term-utf8.sh
+source ${BUI_HOME}/bui-term-sgr.sh
+source ${BUI_HOME}/bui-term-csi.sh
 
 # global panel geometry
-declare -ri BIW_MARGIN=10
-declare -i biw_panel_col_size=60
-declare -i biw_panel_row_size=20
+declare -ir BUI_MARGIN=10
+declare -ir BUI_PANEL_COL_SIZE_DEFAULT=60
+declare -i bui_panel_col_size
+declare -ir BUI_PANEL_ROW_SIZE_DEFAULT=20
+declare -i bui_panel_row_size
 
 # returned by actions to indicate if the menu contents changed. 
 declare -ri UTIL_ACT_IGNORED=1
@@ -49,13 +51,13 @@ function fn_util_dispatcher()
         # redraw hmenu in case of change in theme, contents, etc.
         fn_hmenu_redraw
 
-        biw_selection_result=''
+        bui_selection_result=''
 
         # get the current menu entry
         fn_hmenu_get_current_val '_menu_val'
 
         # find the controller function in the map
-        _controller=${BIW_DISPATCH_MAP["$_menu_val"]:-fn_util_controller_default}
+        _controller=${BUI_DISPATCH_MAP["$_menu_val"]:-fn_util_controller_default}
 
         # invoke the controller
         $_controller
@@ -137,14 +139,14 @@ function fn_util_set_cursor_pos()
     local -i _abs_col=$2
 
     fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_UP $((biw_panel_row_size - _abs_row))
+    fn_csi_op $CSI_OP_ROW_UP $((bui_panel_row_size - _abs_row))
     fn_util_set_col_pos $_abs_col
 }
 
 function fn_util_set_col_pos()
 {
     local -i _abs_col=$1
-    fn_csi_op $CSI_OP_COL_POS $((BIW_MARGIN + _abs_col))
+    fn_csi_op $CSI_OP_COL_POS $((BUI_MARGIN + _abs_col))
 }
 
 function fn_util_panel_open()
@@ -161,8 +163,11 @@ function fn_util_panel_open()
     stty -echo
 
     # load size prefs
-    fn_settings_get_param "$UTIL_PARAM_PANEL_ROWS" 'biw_panel_row_size'
-    fn_settings_get_param "$UTIL_PARAM_PANEL_COLS" 'biw_panel_col_size'
+    fn_settings_get_param "$UTIL_PARAM_PANEL_ROWS" \
+        'bui_panel_row_size' $BUI_PANEL_ROW_SIZE_DEFAULT
+
+    fn_settings_get_param "$UTIL_PARAM_PANEL_COLS" \
+        'bui_panel_col_size' $BUI_PANEL_COL_SIZE_DEFAULT
 
     # hide the cursor to eliminate flicker
     fn_csi_op $CSI_OP_CURSOR_HIDE
@@ -179,25 +184,25 @@ function fn_util_panel_open()
 
 function fn_util_scroll_open()
 {
-    local -i _move_lines=$((sgr_cache_row_pos - biw_panel_row_size - 1))
+    local -i _move_lines=$((sgr_cache_row_pos - bui_panel_row_size - 1))
 
     # if we are too close to the top of the screen then we need 
     # to move down instead of scroll up.
     if((_move_lines < 0))
     then
-        fn_csi_op $CSI_OP_ROW_DOWN $biw_panel_row_size
+        fn_csi_op $CSI_OP_ROW_DOWN $bui_panel_row_size
 
         # update cursor position
         fn_csi_get_row_pos 'sgr_cache_row_pos'
         return
     fi
 
-    fn_util_scroll_resize $biw_panel_row_size
+    fn_util_scroll_resize $bui_panel_row_size
 }
 
 function fn_util_panel_close()
 {
-    fn_util_scroll_resize $((biw_panel_row_size*-1))
+    fn_util_scroll_resize $((bui_panel_row_size*-1))
 
     # restore original cursor position
     fn_csi_op $CSI_OP_CURSOR_RESTORE
@@ -217,18 +222,18 @@ function fn_util_panel_set_dims()
     local -i _rows=$1
     local -i _cols=$2
 
-    if((_rows != biw_panel_row_size))
+    if((_rows != bui_panel_row_size))
     then
         fn_settings_set_param $UTIL_PARAM_PANEL_ROWS $_rows
-        fn_util_scroll_resize $((_rows - biw_panel_row_size))
-        biw_panel_row_size=$_rows
+        fn_util_scroll_resize $((_rows - bui_panel_row_size))
+        bui_panel_row_size=$_rows
     fi
 
-    if((_cols != biw_panel_col_size))
+    if((_cols != bui_panel_col_size))
     then
         fn_settings_set_param $UTIL_PARAM_PANEL_COLS $_cols
         fn_util_clear_screen 0
-        biw_panel_col_size=$_cols
+        bui_panel_col_size=$_cols
     fi
 
     fn_hmenu_redraw
@@ -261,8 +266,8 @@ function fn_util_scroll_resize()
         fn_csi_op $CSI_OP_ROW_ERASE
         
         # non-animate close:
-        #fn_csi_op $CSI_OP_ROW_DELETE $biw_panel_row_size
-        #fn_csi_op $CSI_OP_SCROLL_DOWN $biw_panel_row_size
+        #fn_csi_op $CSI_OP_ROW_DELETE $bui_panel_row_size
+        #fn_csi_op $CSI_OP_SCROLL_DOWN $bui_panel_row_size
     else
 
         _row_count=$_rows
@@ -275,9 +280,9 @@ function fn_util_scroll_resize()
         done
 
         # non-animated open:
-        #fn_csi_op $CSI_OP_SCROLL_UP $biw_panel_row_size
-        #fn_biw_cursor_home
-        #fn_csi_op $CSI_OP_ROW_INSERT $biw_panel_row_size
+        #fn_csi_op $CSI_OP_SCROLL_UP $bui_panel_row_size
+        #fn_bui_cursor_home
+        #fn_csi_op $CSI_OP_ROW_INSERT $bui_panel_row_size
     fi
 }
 
@@ -421,12 +426,12 @@ function fn_util_draw_footer()
     local _message="$1"
 
     fn_sgr_seq_start
-    fn_util_set_cursor_pos $biw_panel_row_size 0
+    fn_util_set_cursor_pos $bui_panel_row_size 0
 
     fn_theme_set_attr_slider 1
-    fn_utf8_print $BIW_CHAR_LINE_BT_LT
+    fn_utf8_print $BUI_CHAR_LINE_BT_LT
     fn_sgr_print ' '
-    fn_csi_print_width "$_message" $((biw_panel_col_size - 2))
+    fn_csi_print_width "$_message" $((bui_panel_col_size - 2))
     
     fn_sgr_seq_flush
 }
@@ -436,7 +441,7 @@ function fn_util_clear_screen()
     local -i _start_row=$1
 
     local -i _row_idx
-    local -i _last_idx=$((biw_panel_row_size - 1))
+    local -i _last_idx=$((bui_panel_row_size - 1))
 
     fn_sgr_seq_start
 
@@ -444,8 +449,8 @@ function fn_util_clear_screen()
     do
         fn_util_set_cursor_pos $_row_idx 0
         fn_theme_set_attr_panel 0
-        fn_csi_op $CSI_OP_COL_ERASE $biw_panel_col_size
-        fn_csi_op $CSI_OP_COL_FORWARD $biw_panel_col_size
+        fn_csi_op $CSI_OP_COL_ERASE $bui_panel_col_size
+        fn_csi_op $CSI_OP_COL_FORWARD $bui_panel_col_size
     done
 
     fn_sgr_seq_flush
@@ -466,7 +471,7 @@ function fn_util_draw_box_panel()
 
     local -i _msg_idx=0
     local -i _row_idx
-    local -i _last_idx=$((biw_panel_row_size - 1))
+    local -i _last_idx=$((bui_panel_row_size - 1))
 
     for((_row_idx=hmenu_row_pos + 1; _row_idx <= _last_idx; _row_idx++))
     do
@@ -477,16 +482,16 @@ function fn_util_draw_box_panel()
 
         if((_row_idx < _last_idx))
         then
-            fn_utf8_print $BIW_CHAR_LINE_VT
+            fn_utf8_print $BUI_CHAR_LINE_VT
 
             local _msg_line="${_msg_array[_msg_idx++]:-}"
-            fn_csi_print_center " $_msg_line" $((biw_panel_col_size - 2))
+            fn_csi_print_center " $_msg_line" $((bui_panel_col_size - 2))
             
-            fn_utf8_print $BIW_CHAR_LINE_VT
+            fn_utf8_print $BUI_CHAR_LINE_VT
         else
-            fn_utf8_print $BIW_CHAR_LINE_BT_LT
-            fn_util_print_hz_line $((biw_panel_col_size - 2))
-            fn_utf8_print $BIW_CHAR_LINE_BT_RT
+            fn_utf8_print $BUI_CHAR_LINE_BT_LT
+            fn_util_print_hz_line $((bui_panel_col_size - 2))
+            fn_utf8_print $BUI_CHAR_LINE_BT_RT
         fi
         fn_sgr_seq_flush
     done
@@ -496,7 +501,7 @@ function fn_util_print_hz_line()
 {
     local -i _line_width=$1
     local _sgr_line
-    local _pad_char=$BIW_CHAR_LINE_HZ
+    local _pad_char=$BUI_CHAR_LINE_HZ
 
     printf -v _sgr_line '%*s' $_line_width
     printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"

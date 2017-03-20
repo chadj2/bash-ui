@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-term-hsi.sh
+# File:         bui-term-hsi.sh
 # Description:  Compute HSL (Hue/Saturation/Light) color space in 216 
 #               color SGR mode.
 ##

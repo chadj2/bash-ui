@@ -1,4 +1,4 @@
-# BIW-TOOLS - Bash Inline Widgets
+# BASH-UI - Bash User Interface
 
 This is still a work in progress.
 

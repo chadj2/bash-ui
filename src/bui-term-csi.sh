@@ -1,11 +1,11 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
 # reserved. See LICENSE.
 #
-# File:         biw-term-csi.sh
+# File:         bui-term-csi.sh
 # Description:  Send terminal control CSI sequences to manipulate the cursor.
 ##
 
@@ -14,8 +14,8 @@ declare -r CSI_KEY_UP='[A'
 declare -r CSI_KEY_DOWN='[B'
 declare -r CSI_KEY_LEFT='[D'
 declare -r CSI_KEY_RIGHT='[C'
-declare -r CSI_KEY_PG_UP='[5'
-declare -r CSI_KEY_PG_DOWN='[6'
+declare -r CSI_KEY_PG_UP='[5~'
+declare -r CSI_KEY_PG_DOWN='[6~'
 declare -r CSI_KEY_HOME='[H'
 declare -r CSI_KEY_END='[F'
 declare -r CSI_KEY_F9='[20~'
@@ -199,7 +199,7 @@ function fn_csi_scroll_region()
     local -i _direction=$3
 
     # set the scrolling bounds
-    local -i _abs_top=$((sgr_cache_row_pos - biw_panel_row_size + _start_row))
+    local -i _abs_top=$((sgr_cache_row_pos - bui_panel_row_size + _start_row))
     local -i _abs_bottom=$((_abs_top + _region_height - 1))
 
     # set the scrolling bounds

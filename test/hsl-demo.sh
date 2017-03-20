@@ -1,5 +1,5 @@
 ##
-# BIW-TOOLS - Bash Inline Widget Tools
+# BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
 # 
 # Licensed under GNU Lesser General Public License v3.0 only. Some rights
@@ -8,8 +8,8 @@
 
 set -o nounset
 
-source ${BIW_HOME}/biw-term-sgr.sh
-source ${BIW_HOME}/biw-term-hsl.sh
+source ${BUI_HOME}/bui-term-sgr.sh
+source ${BUI_HOME}/bui-term-hsl.sh
 
 function fn_print_padding()
 {
