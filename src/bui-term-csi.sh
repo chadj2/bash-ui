@@ -50,6 +50,8 @@ declare -r CSI_OP_CURSOR_HIDE='?25l'
 declare -r CSI_OP_CURSOR_SHOW='?25h'
 declare -r CSI_OP_CURSOR_SAVE='?1048h'
 declare -r CSI_OP_CURSOR_RESTORE='?1048l'
+declare -r CSI_OP_KEYBOARD_LOCK='2h'
+declare -r CSI_OP_KEYBOARD_UNLOCK='2l'
 
 # cached position of the curor after restore
 declare -i sgr_cache_row_pos
@@ -164,6 +166,17 @@ function fn_csi_get_row_pos()
 {
     local _row_ref=$1
 
+    # disable keyboard. We do this to prevent keys from corrupting the response
+    fn_csi_op $CSI_OP_KEYBOARD_LOCK
+
+    # read any character still being sent
+    local _tmp_char
+    while fn_csi_read_key '_tmp_char' $CSI_READ_ESC_TIMEOUT
+    do
+        # do nothing
+        _tmp_char=''
+    done
+
     # Here we request a DSR that will return the position 
     # of the row/column as: '\e[<row>;<col>R'
     fn_csi_op $CSI_OP_GET_POSITION
@@ -192,6 +205,9 @@ function fn_csi_get_row_pos()
 
     # read the column position. We don't use this.
     fn_csi_read_delim '_read_temp' 'R'
+
+    # enable keyboard
+    fn_csi_op $CSI_OP_KEYBOARD_UNLOCK
 }
 
 function fn_csi_scroll_region()
