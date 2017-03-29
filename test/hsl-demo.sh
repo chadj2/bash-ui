@@ -9,7 +9,6 @@
 set -o nounset
 
 source ${BUI_HOME}/bui-term-sgr.sh
-source ${BUI_HOME}/bui-term-hsl.sh
 
 function fn_print_padding()
 {
@@ -64,7 +63,7 @@ function fn_demo_hsl216_sat_blocks()
             for((_hue = 0; _hue < HSL216_HUE_SIZE; _hue++))
             do
                 fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
-                fn_sgr_print " "
+                fn_sgr_print ' '
             done
             
             fn_sgr_seq_flush
@@ -110,7 +109,7 @@ function fn_demo_hsl216_lum_blocks()
             for((_hue = 0; _hue < HSL216_HUE_SIZE; _hue++))
             do
                 fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
-                fn_sgr_print " "
+                fn_sgr_print ' '
             done
             
             fn_sgr_seq_flush
@@ -151,7 +150,7 @@ function fn_demo_hsl216_comp_blocks()
             for((_sat = -1*(HSL216_SAT_SIZE - 1); _sat < HSL216_SAT_SIZE; _sat++))
             do
                 fn_hsl216_set $SGR_ATTR_BG $_hue $_sat $_light || exit 1
-                echo -n " "
+                fn_sgr_print ' '
             done
             fn_sgr_op $SGR_ATTR_DEFAULT
             fn_print_padding $_margin ' '
@@ -167,6 +166,60 @@ function fn_demo_hsl216_comp()
     fn_demo_hsl216_comp_blocks 9 12 15
 }
 
+function fn_hsl_gradient_print()
+{
+    local -i _hue_start=$1
+    local -i _hue_end=$2
+    local -i _sat=$3
+    local -i _light=$4
+
+    fn_hsl216_get $_hue_start $_sat $_light
+    local -i _sgr_start=$?
+
+    fn_hsl216_get $_hue_end $_sat $_light
+    local -i _sgr_end=$?
+
+    # generate color map
+    local -i _map_size=24
+    local -a _cmap=()
+    fn_rgb216_gradient '_cmap' $_map_size $_sgr_start $_sgr_end
+
+    local -i _map_idx
+    local -i _sgr_color
+
+    for((_map_idx=0; _map_idx < _map_size; _map_idx++))
+    do
+        _sgr_color=${_cmap[_map_idx]}
+        fn_sgr_color216_set $SGR_ATTR_BG $_sgr_color
+        fn_sgr_print ' '
+    done
+    fn_sgr_op $SGR_ATTR_DEFAULT
+    echo
+}
+
+function fn_hsl_gradient_demo()
+{
+    echo "Green to Cyan gradient for Saturation: "
+
+    local -i _sat
+    for((_sat = HSL216_SAT_SIZE - 1; _sat >= 0; _sat--))
+    do
+        fn_sgr_print "S=${_sat}) "
+        fn_hsl_gradient_print $HSL216_HUE_GREEN $HSL216_HUE_CYAN $_sat 5
+    done
+    echo
+
+    echo "Green to Cyan gradient for Light: "
+
+    local -i _light
+    for((_light = HSL216_LIGHT_SIZE - 1; _light >= 0; _light--))
+    do
+        fn_sgr_print "L=${_light}) "
+        fn_hsl_gradient_print $HSL216_HUE_GREEN $HSL216_HUE_CYAN 5 $_light
+    done
+    echo
+}
+
 echo "Computing HSL216 Table..."
 fn_hsl216_init
 
@@ -177,3 +230,6 @@ fn_demo_hsl216_sat
 
 # display 6 blocks of color compliments by saturation
 fn_demo_hsl216_comp
+
+# compute a gradient between 2 HSL colors in RGB space
+fn_hsl_gradient_demo

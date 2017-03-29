@@ -13,6 +13,8 @@
 # generate errors if unset vars are used.
 set -o nounset
 
+source ${BUI_HOME}/bui-term-draw.sh
+source ${BUI_HOME}/bui-settings.sh
 source ${BUI_HOME}/bui-util.sh
 source ${BUI_HOME}/bui-theme-mgr.sh
 source ${BUI_HOME}/bui-panel-hmenu.sh
@@ -21,7 +23,9 @@ source ${BUI_HOME}/bui-panel-browse.sh
 source ${BUI_HOME}/bui-panel-credits.sh
 source ${BUI_HOME}/bui-panel-slider.sh
 
-declare -r BUI_VERSION=0.9
+declare -r BUI_VERSION=1.0
+
+declare -r BIW_MIN_BASH_VERSION='4.1.17'
 
 # a controller can set a result here when it is closed.
 declare bui_selection_result
@@ -30,6 +34,8 @@ function fn_bui_main()
 {
     # remove any existing result file.
     rm -f $BUI_RESULT_FILE
+
+    #fn_util_bash_version_check "$BIW_MIN_BASH_VERSION"
 
     fn_util_panel_open
     fn_theme_init
@@ -316,16 +322,16 @@ function fn_bui_controller_cfg_dims()
 
     declare -a slider_ctl_width=(
         [$SLIDER_CTL_ATTR_LABEL]='Width'
-        [$SLIDER_CTL_ATTR_MIN]=40
-        [$SLIDER_CTL_ATTR_MAX]=80
-        [$SLIDER_CTL_ATTR_VAL]=$bui_panel_col_size
+        [$SLIDER_CTL_ATTR_MIN]=$BUI_PANEL_COL_SIZE_MIN
+        [$SLIDER_CTL_ATTR_MAX]=$BUI_PANEL_COL_SIZE_MAX
+        [$SLIDER_CTL_ATTR_VAL]=$draw_panel_col_size
         )
 
     declare -a slider_ctl_height=(
         [$SLIDER_CTL_ATTR_LABEL]='Height'
-        [$SLIDER_CTL_ATTR_MIN]=8
-        [$SLIDER_CTL_ATTR_MAX]=40
-        [$SLIDER_CTL_ATTR_VAL]=$bui_panel_row_size
+        [$SLIDER_CTL_ATTR_MIN]=$BUI_PANEL_ROW_SIZE_MIN
+        [$SLIDER_CTL_ATTR_MAX]=$BUI_PANEL_ROW_SIZE_MAX
+        [$SLIDER_CTL_ATTR_VAL]=$draw_panel_row_size
         )
 
     local -a _slider_list=(
@@ -334,7 +340,7 @@ function fn_bui_controller_cfg_dims()
 
     fn_slider_init '_slider_list[@]'
     fn_slider_redraw
-    fn_util_draw_footer 'Set Panel Dimensions'
+    fn_draw_footer_bar 'Set Panel Dimensions'
 
     local _key
 
@@ -348,7 +354,7 @@ function fn_bui_controller_cfg_dims()
             # action handled so get next key
             if((!bui_dims_save_pending))
             then
-                fn_util_draw_footer 'Hit [Enter] or [Space] to save; [ESC] to cancel.'
+                fn_draw_footer_bar 'Hit [Enter] or [Space] to save; [ESC] to cancel.'
                 bui_dims_save_pending=1
             fi
             continue
@@ -375,7 +381,7 @@ function fn_bui_cfg_dims_save()
     fn_util_panel_set_dims $_rows $_cols
 
     fn_slider_redraw
-    fn_util_draw_footer 'Changes saved to settings file.'
+    fn_draw_footer_bar 'Changes saved to settings file.'
     
     bui_dims_save_pending=0
 }

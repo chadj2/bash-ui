@@ -66,8 +66,8 @@ ${_old_selected_value} Menu Options:
 [CTRL-C]: Exit application
 EOM
 
-    # fill the panel with an empty box
-    fn_util_draw_box_panel $((hmenu_row_pos + 1)) '_panel_msg[@]'
+    # fill the panel with a box showing the above text.
+    fn_draw_box_panel $((hmenu_row_pos + 1)) '_panel_msg[@]'
 
     # the user should use up and down keys to navigate
     local _key
@@ -161,7 +161,7 @@ function fn_hmenu_redraw()
     local -i _total_width=0
     local -i _print_width
 
-    hmenu_col_size=$bui_panel_col_size
+    hmenu_col_size=$draw_panel_col_size
 
     for((_item_idx = 0; _item_idx < hmenu_data_size; _item_idx++))
     do
@@ -174,7 +174,7 @@ function fn_hmenu_redraw()
     fn_sgr_seq_start
     fn_theme_set_attr $THEME_SET_DEF_INACTIVE
     fn_sgr_op $SGR_ATTR_UNDERLINE
-    fn_sgr_print_pad '' $((hmenu_col_size - _total_width))
+    fn_draw_print_pad '' $((hmenu_col_size - _total_width))
     fn_sgr_seq_flush
 
     ((hmenu_idx_redraws++))
@@ -187,18 +187,18 @@ function fn_hmenu_draw_item()
 
     fn_sgr_seq_start
 
-    fn_util_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
+    fn_draw_set_cursor_pos $hmenu_row_pos $((_item_idx*HMENU_ITEM_WIDTH))
     fn_theme_set_attr_panel $((_item_idx == hmenu_idx_selected))
     fn_sgr_op $SGR_ATTR_UNDERLINE
 
     if ((_item_idx == hmenu_idx_selected))
     then
         fn_sgr_print '['
-        fn_sgr_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 2))
+        fn_draw_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 2))
         fn_sgr_print ']'
     else
         fn_sgr_print ' '
-        fn_sgr_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 1))
+        fn_draw_print_pad "$_item_value" $((HMENU_ITEM_WIDTH - 1))
     fi
 
     fn_sgr_seq_flush

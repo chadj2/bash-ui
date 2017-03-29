@@ -9,8 +9,6 @@
 # Description:  Manage SGR attributes based on display themes.
 ##
 
-source ${BUI_HOME}/bui-term-hsl.sh
-
 # Theme description
 declare -r THEME_CFG_DESC=1
 
@@ -37,7 +35,7 @@ declare -r THEME_CFG_SLA_ATTR=51
 declare -ri THEME_CFG_HSL_BASE=100
 declare -ri THEME_ATTR_INVERT=$((THEME_CFG_HSL_BASE + 1))
 
-source ${BUI_HOME}/bui-themes.sh
+source ${BUI_HOME}/bui-theme-config.sh
 
 # Options for setting theme attributes
 declare -ri THEME_SET_DEF_INACTIVE=20

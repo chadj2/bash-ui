@@ -9,6 +9,8 @@
 # Description:  Send terminal control CSI sequences to manipulate the cursor.
 ##
 
+source ${BUI_HOME}/bui-term-sgr.sh
+
 # key codes returned by fn_csi_read_key
 declare -r CSI_KEY_UP='[A'
 declare -r CSI_KEY_DOWN='[B'
@@ -29,6 +31,7 @@ declare -r CSI_KEY_ESC='ESC'
 # CSI op codes used with fn_csi_op
 declare -r CSI_OP_SCROLL_UP='S'
 declare -r CSI_OP_SCROLL_DOWN='T'
+declare -r CSI_OP_ROW_POS='d'
 declare -r CSI_OP_ROW_INSERT='L'
 declare -r CSI_OP_ROW_DELETE='M'
 declare -r CSI_OP_ROW_UP='A'
@@ -64,7 +67,6 @@ function fn_csi_op()
     local _cmd="\e[${_param}${_op}"
     fn_sgr_seq_write "$_cmd"
 }
-
 
 function fn_csi_read_key()
 {
@@ -199,7 +201,7 @@ function fn_csi_scroll_region()
     local -i _direction=$3
 
     # set the scrolling bounds
-    local -i _abs_top=$((sgr_cache_row_pos - bui_panel_row_size + _start_row))
+    local -i _abs_top=$((sgr_cache_row_pos - draw_panel_row_size + _start_row))
     local -i _abs_bottom=$((_abs_top + _region_height - 1))
 
     # set the scrolling bounds
@@ -218,6 +220,7 @@ function fn_csi_scroll_region()
     # reset the scrolling bounds to default
     fn_csi_op $CSI_OP_SET_SCROLL
 }
+
 
 function fn_csi_read_delim()
 {

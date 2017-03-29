@@ -52,8 +52,8 @@ function fn_vmenu_init()
 
     # Geometry
     vmenu_row_pos=$((hmenu_row_pos + 1))
-    vmenu_row_size=$((bui_panel_row_size - vmenu_row_pos))
-    vmenu_col_size=$bui_panel_col_size
+    vmenu_row_size=$((draw_panel_row_size - vmenu_row_pos))
+    vmenu_col_size=$draw_panel_col_size
     vmenu_footer_show=0
 
     # panel display area defaults to the start of the list. This 
@@ -200,7 +200,7 @@ function fn_vmenu_set_row_idx()
     local -i _line_idx=$1
     local -i _abs_index=$((_line_idx - vmenu_idx_panel_top))
     local -i _row_pos=$((vmenu_row_pos + _abs_index))
-    fn_util_set_cursor_pos $_row_pos 0
+    fn_draw_set_cursor_pos $_row_pos 0
 }
 
 function fn_vmenu_redraw()
@@ -242,7 +242,7 @@ function fn_vmenu_redraw()
 
     if((vmenu_footer_show))
     then
-        fn_util_draw_footer "$vmenu_footer_message"
+        fn_draw_footer_bar "$vmenu_footer_message"
     fi
 
     ((vmenu_idx_redraws++))
@@ -287,7 +287,7 @@ function fn_menu_draw_indicator()
         if [ ${#vmenu_ind_values[@]} != 0 ]
         then
             _line_indicator="${vmenu_ind_values[_line_idx]:- }"
-            fn_utf8_set _line_indicator "$_line_indicator"
+            fn_draw_utf8_set_var _line_indicator "$_line_indicator"
             _line_indicator_size=1
         else
             _line_indicator=$_line_idx
@@ -311,7 +311,7 @@ function fn_vmenu_draw_selection()
     local _selection="${vmenu_data_values[$_line_idx]:- }"
 
     fn_theme_set_attr_panel $((vmenu_idx_selected == _line_idx))
-    fn_csi_print_width " ${_selection}" $((_print_width))
+    fn_draw_print_width " ${_selection}" $((_print_width))
 }
 
 function fn_vmenu_draw_slider()
@@ -325,26 +325,26 @@ function fn_vmenu_draw_slider()
         # Top charachter
         if ((_line_idx == 0))
         then
-            fn_utf8_set _last_char $BUI_CHAR_LINE_T_TOP
+            fn_draw_utf8_set_var _last_char $BUI_CHAR_LINE_T_TOP
         else
-            fn_utf8_set _last_char $BUI_CHAR_TRIANGLE_UP
+            fn_draw_utf8_set_var _last_char $BUI_CHAR_TRIANGLE_UP
         fi
     elif ((_line_idx < vmenu_idx_panel_end))
     then
-        fn_utf8_set _last_char $BUI_CHAR_LINE_VT
+        fn_draw_utf8_set_var _last_char $BUI_CHAR_LINE_VT
 
     elif ((_line_idx == vmenu_idx_panel_end))
     then
         # Bottom Charachter
         if ((_line_idx == vmenu_idx_last))
         then
-            fn_utf8_set _last_char $BUI_CHAR_LINE_T_BT
+            fn_draw_utf8_set_var _last_char $BUI_CHAR_LINE_T_BT
         else
-            fn_utf8_set _last_char $BUI_CHAR_TRIANGLE_DN
+            fn_draw_utf8_set_var _last_char $BUI_CHAR_TRIANGLE_DN
         fi
     fi
 
-    fn_util_set_col_pos $((vmenu_col_size - 1))
+    fn_draw_set_col_pos $((vmenu_col_size - 1))
     fn_theme_set_attr_slider $((vmenu_idx_selected == _line_idx))
     fn_sgr_print "$_last_char"
 }

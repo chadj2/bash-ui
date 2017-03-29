@@ -84,12 +84,12 @@ function fn_slider_actions()
 function fn_slider_redraw()
 {
     # fill the panel with an empty box
-    fn_util_clear_screen $slider_panel_row_pos
+    fn_draw_clear_screen $slider_panel_row_pos
 
     # calculate slider position
-    slider_canvas_col_pos=$(( (bui_panel_col_size - SLIDER_CANVAS_COL_SIZE)/2 ))
+    slider_canvas_col_pos=$(( (draw_panel_col_size - SLIDER_CANVAS_COL_SIZE)/2 ))
 
-    slider_panel_row_size=$((bui_panel_row_size - hmenu_row_pos - 1))
+    slider_panel_row_size=$((draw_panel_row_size - hmenu_row_pos - 1))
     slider_canvas_row_size=$((slider_ctl_count*SLIDER_CTL_ROW_SIZE))
     slider_canvas_row_pos=$(( (slider_panel_row_size - slider_canvas_row_size)/2 ))
 
@@ -167,7 +167,7 @@ function fn_slider_set_cursor_pos()
     local -i _real_col_pos=$((_col_pos + slider_canvas_col_pos))
     local -i _real_row_pos=$((_row_pos + slider_panel_row_pos + slider_canvas_row_pos))
 
-    fn_util_set_cursor_pos $_real_row_pos $_real_col_pos
+    fn_draw_set_cursor_pos $_real_row_pos $_real_col_pos
 }
 
 function fn_slider_ctl_idx_draw()
@@ -226,7 +226,7 @@ function fn_slider_ctl_draw_header()
     printf -v _digits '%2d' $_pos_min
     fn_sgr_print "$_digits"
 
-    fn_csi_print_center "$_label" $((SLIDER_CTL_COL_SIZE - DIGITS_SIZE*2))
+    fn_draw_print_center "$_label" $((SLIDER_CTL_COL_SIZE - DIGITS_SIZE*2))
 
     printf -v _digits '%2d' $_pos_max
     fn_sgr_print "$_digits"
@@ -266,35 +266,35 @@ function fn_slider_draw_ctl_bar()
     local -i _active=$3
     
     fn_theme_set_attr_panel $_active
-    fn_utf8_print $BUI_CHAR_TRIANGLE_LT
+    fn_draw_utf8_print $BUI_CHAR_TRIANGLE_LT
 
     # leading space
     fn_theme_set_attr_panel 0
     if((_position_idx == 0))
     then
-        fn_utf8_print $BUI_CHAR_LINE_VT
+        fn_draw_utf8_print $BUI_CHAR_LINE_VT
     else
-        fn_utf8_print $BUI_CHAR_LINE_T_LT
+        fn_draw_utf8_print $BUI_CHAR_LINE_T_LT
     fi
 
-    fn_utf8_print $BUI_CHAR_LINE_HZ $((_position_idx))
+    fn_draw_utf8_print $BUI_CHAR_LINE_HZ $((_position_idx))
 
     fn_theme_set_attr_panel $_active
     fn_sgr_print '('
     fn_sgr_print ')'
 
     fn_theme_set_attr_panel 0
-    fn_utf8_print $BUI_CHAR_LINE_HZ $((_position_max - _position_idx))
+    fn_draw_utf8_print $BUI_CHAR_LINE_HZ $((_position_max - _position_idx))
 
     # trailing space
     if((_position_idx == _position_max))
     then
-        fn_utf8_print $BUI_CHAR_LINE_VT
+        fn_draw_utf8_print $BUI_CHAR_LINE_VT
     else
         fn_theme_set_attr_panel 0
-        fn_utf8_print $BUI_CHAR_LINE_T_RT
+        fn_draw_utf8_print $BUI_CHAR_LINE_T_RT
     fi
 
     fn_theme_set_attr_panel $_active
-    fn_utf8_print $BUI_CHAR_TRIANGLE_RT
+    fn_draw_utf8_print $BUI_CHAR_TRIANGLE_RT
 }

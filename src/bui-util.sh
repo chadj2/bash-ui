@@ -10,29 +10,24 @@
 # Description:  Controller functions for vmenu panels
 ##
 
-source ${BUI_HOME}/bui-settings.sh
-source ${BUI_HOME}/bui-term-utf8.sh
-source ${BUI_HOME}/bui-term-sgr.sh
-source ${BUI_HOME}/bui-term-csi.sh
+# set to 1 for debug line
+declare -i UTIL_DEBUG_ENABLE=0
 
-# global panel geometry
-declare -ir BUI_MARGIN=10
+# debug state
+declare -i UTIL_DEBUG_SEQ=0
+declare UTIL_DEBUG_MSG=''
+
 declare -ir BUI_PANEL_COL_SIZE_DEFAULT=60
-declare -i bui_panel_col_size
+declare -ir BUI_PANEL_COL_SIZE_MIN=40
+declare -ir BUI_PANEL_COL_SIZE_MAX=80
+
 declare -ir BUI_PANEL_ROW_SIZE_DEFAULT=20
-declare -i bui_panel_row_size
+declare -ir BUI_PANEL_ROW_SIZE_MIN=14
+declare -ir BUI_PANEL_ROW_SIZE_MAX=40
 
 # returned by actions to indicate if the menu contents changed. 
 declare -ri UTIL_ACT_IGNORED=1
 declare -ri UTIL_ACT_CHANGED=0
-
-# debug only
-declare -i UTIL_DEBUG_ENABLE=0
-declare -i UTIL_DEBUG_SEQ=0
-declare UTIL_DEBUG_MSG=''
-
-# determines speed of panel open/close
-declare -r UTIL_OC_ANIMATE_DELAY=0.01
 
 # controllers will set this when the app should terminate
 declare -i util_exit_dispatcher=0
@@ -76,7 +71,7 @@ function fn_util_dispatcher()
 function fn_util_controller_default()
 {
     # fill the panel with an empty box
-    fn_util_draw_box_panel $((hmenu_row_pos + 1))
+    fn_draw_box_panel $((hmenu_row_pos + 1))
 
     local _key
     while fn_util_process_key _key
@@ -133,20 +128,42 @@ function fn_util_process_key()
     return $UTIL_ACT_CHANGED
 }
 
-function fn_util_set_cursor_pos()
+function fn_util_bash_version_check()
 {
-    local -i _abs_row=$1
-    local -i _abs_col=$2
+    local _min_version_str=$1
 
-    fn_csi_op $CSI_OP_CURSOR_RESTORE
-    fn_csi_op $CSI_OP_ROW_UP $((bui_panel_row_size - _abs_row))
-    fn_util_set_col_pos $_abs_col
+    local _current_str
+    printf -v _current_str '%s.%s.%s' \
+        "${BASH_VERSINFO[0]}" \
+        "${BASH_VERSINFO[1]}" \
+        "${BASH_VERSINFO[2]}"
+
+    local -i _current_version
+    fn_util_parse_version $_current_str '_current_version'
+
+    local -i _min_version
+    fn_util_parse_version $_min_version_str '_min_version'
+
+    if((_current_version < _min_version))
+    then
+        fn_util_die "Bash Version too old (${_current_str} < ${_min_version_str})"
+    fi
 }
 
-function fn_util_set_col_pos()
+function fn_util_parse_version()
 {
-    local -i _abs_col=$1
-    fn_csi_op $CSI_OP_COL_POS $((BUI_MARGIN + _abs_col))
+    local _version_str=$1
+    local _result_ref=$2
+
+    local -a _version_arr=( ${_version_str//./ } )
+    local -i _version_int=0
+    ((_version_int += _version_arr[0]))
+    ((_version_int *= 100))
+    ((_version_int += _version_arr[1]))
+    ((_version_int *= 1000))
+    ((_version_int += _version_arr[2]))
+
+    printf -v $_result_ref '%d' $_version_int
 }
 
 function fn_util_panel_open()
@@ -164,10 +181,10 @@ function fn_util_panel_open()
 
     # load size prefs
     fn_settings_get_param "$UTIL_PARAM_PANEL_ROWS" \
-        'bui_panel_row_size' $BUI_PANEL_ROW_SIZE_DEFAULT
+        'draw_panel_row_size' $BUI_PANEL_ROW_SIZE_DEFAULT
 
     fn_settings_get_param "$UTIL_PARAM_PANEL_COLS" \
-        'bui_panel_col_size' $BUI_PANEL_COL_SIZE_DEFAULT
+        'draw_panel_col_size' $BUI_PANEL_COL_SIZE_DEFAULT
 
     # hide the cursor to eliminate flicker
     fn_csi_op $CSI_OP_CURSOR_HIDE
@@ -184,25 +201,25 @@ function fn_util_panel_open()
 
 function fn_util_scroll_open()
 {
-    local -i _move_lines=$((sgr_cache_row_pos - bui_panel_row_size - 1))
+    local -i _move_lines=$((sgr_cache_row_pos - draw_panel_row_size - 1))
 
     # if we are too close to the top of the screen then we need 
     # to move down instead of scroll up.
     if((_move_lines < 0))
     then
-        fn_csi_op $CSI_OP_ROW_DOWN $bui_panel_row_size
+        fn_csi_op $CSI_OP_ROW_DOWN $draw_panel_row_size
 
         # update cursor position
         fn_csi_get_row_pos 'sgr_cache_row_pos'
         return
     fi
 
-    fn_util_scroll_resize $bui_panel_row_size
+    fn_draw_scroll_resize $draw_panel_row_size
 }
 
 function fn_util_panel_close()
 {
-    fn_util_scroll_resize $((bui_panel_row_size*-1))
+    fn_draw_scroll_resize $((draw_panel_row_size*-1))
 
     # restore original cursor position
     fn_csi_op $CSI_OP_CURSOR_RESTORE
@@ -222,75 +239,29 @@ function fn_util_panel_set_dims()
     local -i _rows=$1
     local -i _cols=$2
 
-    if((_rows != bui_panel_row_size))
+    if((_rows != draw_panel_row_size))
     then
         fn_settings_set_param $UTIL_PARAM_PANEL_ROWS $_rows
-        fn_util_scroll_resize $((_rows - bui_panel_row_size))
-        bui_panel_row_size=$_rows
+        fn_draw_scroll_resize $((_rows - draw_panel_row_size))
+        draw_panel_row_size=$_rows
     fi
 
-    if((_cols != bui_panel_col_size))
+    if((_cols != draw_panel_col_size))
     then
         fn_settings_set_param $UTIL_PARAM_PANEL_COLS $_cols
-        fn_util_clear_screen 0
-        bui_panel_col_size=$_cols
+        fn_draw_clear_screen 0
+        draw_panel_col_size=$_cols
     fi
 
     fn_hmenu_redraw
 }
 
-function fn_util_scroll_resize()
-{
-    local -i _rows=$1
-
-    local -i _line_idx
-    local -i _row_count
-
-    if((_rows < 0))
-    then
-        # position the cursor at the start of the menu
-        fn_util_set_cursor_pos 0 0
-
-        _row_count=$((_rows*-1))
-
-        # animate close
-        for((_line_idx = 0; _line_idx < _row_count; _line_idx++))
-        do
-            fn_csi_op $CSI_OP_ROW_DELETE 1
-            fn_csi_op $CSI_OP_SCROLL_DOWN 1
-            fn_csi_op $CSI_OP_ROW_DOWN 1
-            fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
-        done
-
-        # clear out any junk on the line
-        fn_csi_op $CSI_OP_ROW_ERASE
-        
-        # non-animate close:
-        #fn_csi_op $CSI_OP_ROW_DELETE $bui_panel_row_size
-        #fn_csi_op $CSI_OP_SCROLL_DOWN $bui_panel_row_size
-    else
-
-        _row_count=$_rows
-
-        # animate open
-        for((_line_idx = 0; _line_idx < _row_count; _line_idx++))
-        do
-            fn_csi_op $CSI_OP_SCROLL_UP 1
-            fn_csi_milli_wait $UTIL_OC_ANIMATE_DELAY
-        done
-
-        # non-animated open:
-        #fn_csi_op $CSI_OP_SCROLL_UP $bui_panel_row_size
-        #fn_bui_cursor_home
-        #fn_csi_op $CSI_OP_ROW_INSERT $bui_panel_row_size
-    fi
-}
 
 function fn_util_die()
 {
     local _err_msg=$1
 
-    fn_util_set_col_pos 0
+    fn_draw_set_col_pos 0
     echo "ERROR: $_err_msg" 2>&1
 
     # this exit should trigger the fn_util_panic trap.
@@ -327,7 +298,9 @@ function fn_util_panic()
     fn_csi_op $CSI_OP_CURSOR_RESTORE
     fn_csi_op $CSI_OP_CURSOR_SHOW
 
-    echo
+    # move cursor down so we don't overwrite error messages
+    fn_csi_op $CSI_OP_ROW_DOWN 5
+
     echo "PANIC Failure at (${_fail_func}:${_fail_line}):"
     echo "=> ${_command}"
     echo
@@ -365,7 +338,8 @@ function fn_util_debug_msg()
 
     local _pattern="${1:-<empty>}"
     shift
-    printf -v UTIL_DEBUG_MSG "%s: ${_pattern}" ${FUNCNAME[1]} "$@" 
+    #printf -v UTIL_DEBUG_MSG "%s: ${_pattern}" ${FUNCNAME[1]} "$@" 
+    printf -v UTIL_DEBUG_MSG "${_pattern}" "$@"
 }
 
 # Return relative path from canonical absolute dir path $1 to canonical
@@ -419,91 +393,4 @@ function fn_util_interp_x()
     local -i _xp_demom=$((_y2 - _y1))
     local -i _xp_div=$((_xp_numerator / _xp_demom ))
     return $_xp_div
-}
-
-function fn_util_draw_footer()
-{
-    local _message="$1"
-
-    fn_sgr_seq_start
-    fn_util_set_cursor_pos $bui_panel_row_size 0
-
-    fn_theme_set_attr_slider 1
-    fn_utf8_print $BUI_CHAR_LINE_BT_LT
-    fn_sgr_print ' '
-    fn_csi_print_width "$_message" $((bui_panel_col_size - 2))
-    
-    fn_sgr_seq_flush
-}
-
-function fn_util_clear_screen()
-{
-    local -i _start_row=$1
-
-    local -i _row_idx
-    local -i _last_idx=$((bui_panel_row_size - 1))
-
-    fn_sgr_seq_start
-
-    for((_row_idx=_start_row; _row_idx <= _last_idx; _row_idx++))
-    do
-        fn_util_set_cursor_pos $_row_idx 0
-        fn_theme_set_attr_panel 0
-        fn_csi_op $CSI_OP_COL_ERASE $bui_panel_col_size
-        fn_csi_op $CSI_OP_COL_FORWARD $bui_panel_col_size
-    done
-
-    fn_sgr_seq_flush
-}
-
-function fn_util_draw_box_panel()
-{
-    local -i _start_row=$1
-    local _msg_ref=${2:-}
-    local -i _theme_attr=${3:-$THEME_SET_DEF_INACTIVE}
-
-    local -a _msg_array=()
-
-    if [ -n "$_msg_ref" ]
-    then
-        _msg_array=( "${!_msg_ref}" )
-    fi
-
-    local -i _msg_idx=0
-    local -i _row_idx
-    local -i _last_idx=$((bui_panel_row_size - 1))
-
-    for((_row_idx=hmenu_row_pos + 1; _row_idx <= _last_idx; _row_idx++))
-    do
-        fn_sgr_seq_start
-
-        fn_util_set_cursor_pos $_row_idx 0
-        fn_theme_set_attr $_theme_attr
-
-        if((_row_idx < _last_idx))
-        then
-            fn_utf8_print $BUI_CHAR_LINE_VT
-
-            local _msg_line="${_msg_array[_msg_idx++]:-}"
-            fn_csi_print_center " $_msg_line" $((bui_panel_col_size - 2))
-            
-            fn_utf8_print $BUI_CHAR_LINE_VT
-        else
-            fn_utf8_print $BUI_CHAR_LINE_BT_LT
-            fn_util_print_hz_line $((bui_panel_col_size - 2))
-            fn_utf8_print $BUI_CHAR_LINE_BT_RT
-        fi
-        fn_sgr_seq_flush
-    done
-}
-
-function fn_util_print_hz_line()
-{
-    local -i _line_width=$1
-    local _sgr_line
-    local _pad_char=$BUI_CHAR_LINE_HZ
-
-    printf -v _sgr_line '%*s' $_line_width
-    printf -v _sgr_line '%b' "${_sgr_line// /${_pad_char}}"
-    fn_sgr_seq_write $_sgr_line
 }
