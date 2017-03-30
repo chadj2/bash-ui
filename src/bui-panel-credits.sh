@@ -112,7 +112,7 @@ function fn_cred_start_animate()
     fn_sprite_start $SPRITE_ID_ALPHA
 
     # Set colormap as Yellow/white gradient
-    fn_sprite_cmap_grad 30 $((HSL216_HUE_YELLOW - 1)) 1 5
+    fn_sprite_cmap_grad 30 $((HSV216_HUE_YELLOW - 1)) 1 5
 
     while ((_row_idx < sprite_canvas_height))
     do
@@ -143,8 +143,8 @@ function fn_cred_start_animate()
     fn_util_assert_equals '_last_inactive' 'SPRITE_ID_CURSOR'
 
     local -ir COLOR_TIMER=50
-    local -ir HUE_INCREMENT=$((HSL216_HUE_SECTORS/2))
-    local -i _color_hue=$((HSL216_HUE_YELLOW - 1))
+    local -ir HUE_INCREMENT=$((HSV216_HUE_SECTORS/2))
+    local -i _color_hue=$((HSV216_HUE_YELLOW - 1))
 
     # Start the with 1 cycle so it will reset and update the colormap.
     fn_sprite_start $SPRITE_ID_TIMER 1
@@ -165,9 +165,9 @@ function fn_cred_start_animate()
                 # timer expired so change the colormap
                 fn_sprite_cmap_grad 15 $_color_hue 2 3
                 ((_color_hue += HUE_INCREMENT))
-                if((_color_hue >= HSL216_HUE_SIZE))
+                if((_color_hue >= HSV216_HUE_SIZE))
                 then
-                    ((_color_hue -= HSL216_HUE_SIZE))
+                    ((_color_hue -= HSV216_HUE_SIZE))
                 fi
 
                 # re-start timer

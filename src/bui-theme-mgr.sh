@@ -31,9 +31,9 @@ declare -r THEME_CFG_SLI_ATTR=41
 declare -r THEME_CFG_SLA_COLOR=50
 declare -r THEME_CFG_SLA_ATTR=51
 
-# Base for HSL colors
-declare -ri THEME_CFG_HSL_BASE=100
-declare -ri THEME_ATTR_INVERT=$((THEME_CFG_HSL_BASE + 1))
+# Base for HSV colors
+declare -ri THEME_CFG_HSV_BASE=100
+declare -ri THEME_ATTR_INVERT=$((THEME_CFG_HSV_BASE + 1))
 
 source ${BUI_HOME}/bui-theme-config.sh
 
@@ -162,23 +162,23 @@ function fn_theme_parse_color()
         local -i _light=${_color_params[1]}
         fn_sgr_grey26_get $_light
         _color_result=$?
-        ((_color_result += THEME_CFG_HSL_BASE))
+        ((_color_result += THEME_CFG_HSV_BASE))
 
     elif((_color_params_size == 4))
     then
-        if [ ${_color_params[0]} != 'HSL216' ]
+        if [ ${_color_params[0]} != 'HSV216' ]
         then
-            fn_util_die "Expected HSL params for ${_theme_name}: ${_color_params[@]}"
+            fn_util_die "Expected HSV params for ${_theme_name}: ${_color_params[@]}"
         fi
 
-        # this must be an HSL color
+        # this must be an HSV color
         local -i _hue=${_color_params[1]}
         local -i _sat=${_color_params[2]}
         local -i _light=${_color_params[3]}
 
-        fn_hsl216_get $_hue $_sat $_light
+        fn_sgr_hsv216_get $_hue $_sat $_light
         _color_result=$?
-        ((_color_result += THEME_CFG_HSL_BASE))
+        ((_color_result += THEME_CFG_HSV_BASE))
     else
         fn_util_die "Bad color for ${_theme_name}: ${_color_params[@]}"
     fi
@@ -239,10 +239,10 @@ function fn_theme_set_color()
     local -i _mode=$1
     local -i _theme_color=$2
 
-    if((_theme_color >= THEME_CFG_HSL_BASE))
+    if((_theme_color >= THEME_CFG_HSV_BASE))
     then
-        fn_sgr_color216_set $_mode $((_theme_color - THEME_CFG_HSL_BASE))
+        fn_sgr_xterm240_set $_mode $((_theme_color - THEME_CFG_HSV_BASE))
     else
-        fn_sgr_color16_set $_mode $_theme_color
+        fn_sgr_ansi16_set $_mode $_theme_color
     fi
 }

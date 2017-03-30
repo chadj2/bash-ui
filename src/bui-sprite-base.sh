@@ -345,9 +345,9 @@ function fn_sprite_alpha_set_color()
 
     if((sprite_alpha_use_color216))
     then
-        fn_sgr_color216_set $SGR_ATTR_FG $_sgr_color
+        fn_sgr_xterm240_set $SGR_ATTR_FG $_sgr_color
     else
-        fn_sgr_color16_set $SGR_ATTR_FG $_sgr_color
+        fn_sgr_ansi16_set $SGR_ATTR_FG $_sgr_color
     fi
 }
 
@@ -382,21 +382,21 @@ function fn_sprite_cmap_grad()
 
     # start color is from the theme
     #local -i _sgr_start=${theme_active_data[THEME_SET_DEF_INACTIVE]}
-    #((_sgr_start -= THEME_CFG_HSL_BASE))
+    #((_sgr_start -= THEME_CFG_HSV_BASE))
 
     # compute start color
-    fn_hsl216_get $HSL216_HUE_GREEN 4 4
+    fn_sgr_hsv216_get $HSV216_HUE_GREEN 4 4
     local -i _sgr_start=$?
 
     # compute end color
-    fn_hsl216_get $_hue_end $_sat_end 5
+    fn_sgr_hsv216_get $_hue_end $_sat_end 5
     local -i _sgr_end=$?
 
     # compute gradient colormap
     sprite_alpha_use_color216=1
     sprite_alpha_cmap=()
     local -i _grad_size=$((_map_size - _end_pad))
-    fn_rgb216_gradient 'sprite_alpha_cmap' $_grad_size $_sgr_start $_sgr_end
+    fn_sgr_rgb216_grad 'sprite_alpha_cmap' $_grad_size $_sgr_start $_sgr_end
 
     # add repeating colors to the end
     local -i _map_idx

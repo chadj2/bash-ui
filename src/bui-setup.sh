@@ -14,9 +14,10 @@ function fn_bui_setup_init()
 {
     if [[ ! "$-" =~ "i" ]]
     then
-        echo "ERROR: This script must be sourced and not executed." 2>&1
+        echo "ERROR: ${BASH_SOURCE[0]}: This script must be sourced and not executed." 2>&1
+        return 1
     fi
-
+    
     # load env vars
     fn_bui_setup_get_env
 
@@ -33,8 +34,12 @@ function fn_bui_setup_init()
 
 function fn_bui_setup_show()
 {
+    # Flush cached history to file. This is part of a workaround mentioned in
+    # fn_bui_load_history
+    history -a 
+
     # show the app
-    ${BUI_HOME}/bui-main.sh
+    bash ${BUI_HOME}/bui-main.sh
 
     fn_update_key_binding
 

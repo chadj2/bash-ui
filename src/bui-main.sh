@@ -1,4 +1,3 @@
-###!/bin/bash
 ##
 # BASH-UI - Bash User Interface Tools
 # Copyright 2017 by Chad Juliano
@@ -12,6 +11,12 @@
 
 # generate errors if unset vars are used.
 set -o nounset
+
+if [ -o posix ]
+then
+    echo "ERROR: Bash-UI should not be run in posix mode." 2>&1
+    exit 1
+fi
 
 source ${BUI_HOME}/bui-term-draw.sh
 source ${BUI_HOME}/bui-settings.sh
@@ -232,21 +237,12 @@ function fn_bui_controller_credits()
 # Controller: History selection panel
 ##
 
-# max values to load for history and file lists
-declare -ri BUI_LIST_MAX=50
-
 function fn_bui_controller_history()
 {
-    local _panel_command="fc -lnr -$BUI_LIST_MAX"
-    local -a _values
+    local -a _hist_values
+    fn_bui_load_history
 
-    # read command into _values
-    mapfile -t -n $BUI_LIST_MAX _values < <($_panel_command)
-
-    # remove first 2 leading blanks for history case
-    _values=("${_values[@]#[[:blank:]][[:blank:]]}")
-
-    fn_vmenu_init _values[@]
+    fn_vmenu_init '_hist_values[@]'
     fn_vmenu_set_message "[ENTER] key copies to prompt"
     fn_vmenu_redraw
 
@@ -263,6 +259,48 @@ function fn_bui_controller_history()
                 break
                 ;;
         esac
+    done
+}
+
+function fn_bui_load_history()
+{
+    local -ri BUI_LIST_MAX=50
+    local -r HIST_FILE=${HOME}/.bash_history
+
+    # Note: we need to read directly from the .bash_history
+    # because the fc builtin may cause a seg fault in some 
+    # versions of Bash.
+
+    if [ ! -r "$HIST_FILE" ]
+    then
+        mapfile _hist_values <<< "<Not readable: ${HIST_FILE}>"
+    fi
+
+    # get number of lines
+    local -a _wc_out=( $(wc -l $HIST_FILE) )
+    local -i _line_count=${_wc_out[0]}
+
+    # read the last lines from the hist file into _hist_tmp
+    local -i _start_line=$(( _line_count - (BUI_LIST_MAX*2) ))
+    if((_start_line < 0))
+    then
+        _start_line=0
+    fi
+
+    local -a _hist_tmp
+    mapfile -t -s$_start_line -n0 _hist_tmp < "$HIST_FILE"
+
+    # append to the _hist_values array in reverse order
+    local -i _hist_tmp_idx
+    local -i _hist_tmp_size=${#_hist_tmp[@]}
+    for((_hist_tmp_idx=_hist_tmp_size - 1; _hist_tmp_idx >= 0; _hist_tmp_idx--))
+    do
+        local _line="${_hist_tmp[_hist_tmp_idx]}"
+        if [[ "$_line" =~ ^# ]]
+        then
+            continue
+        fi
+        _hist_values+=( "$_line" )
     done
 }
 
