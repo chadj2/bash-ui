@@ -215,7 +215,8 @@ The objective of the calculation is to represent a function for the RGB channels
 parameters. The above diagram has vertical lines labeled `h1` at 90&deg; and `h2` at 150&deg; and
 where they intersect the RGB functions there are 4 points are indicated over the line segments.
 
-| Segment | Name | Description                     |
+| Segment | Name   | Description                   |
+| ---     | ---    | ---                           |
 | 1       | `Vdn`  | Downward sloping line segment |
 | 2       | `Vmin` | Minimum RGB value             |
 | 3       | `Vmax` | Maximum RGB value             |
