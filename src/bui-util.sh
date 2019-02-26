@@ -32,6 +32,9 @@ declare -ri UTIL_ACT_CHANGED=0
 # controllers will set this when the app should terminate
 declare -i util_exit_dispatcher=0
 
+# determines if local echo should be enabled on termination
+declare -i util_exit_echo=0
+
 # settings keys
 declare -r UTIL_PARAM_PANEL_ROWS='panel-rows'
 declare -r UTIL_PARAM_PANEL_COLS='panel-cols'
@@ -226,6 +229,12 @@ function fn_util_panel_close()
 
     # restore terminal settings
     fn_csi_op $CSI_OP_CURSOR_SHOW
+    
+    # if this is not a hotkey then echo should be enabled.
+    if ((util_exit_echo))
+    then
+        stty echo
+    fi
 
     # remove signal handler
     trap - SIGHUP SIGINT SIGTERM
@@ -297,6 +306,12 @@ function fn_util_panic()
     # show and restore cursor
     fn_csi_op $CSI_OP_CURSOR_RESTORE
     fn_csi_op $CSI_OP_CURSOR_SHOW
+    
+    # if this is not a hotkey then echo should be enabled.
+    if ((util_exit_echo))
+    then
+        stty echo
+    fi
 
     # move cursor down so we don't overwrite error messages
     fn_csi_op $CSI_OP_ROW_DOWN 5
