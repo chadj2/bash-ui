@@ -11,6 +11,7 @@ prompt.
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
+    - [MacOS Prerequisites](#macos-prerequisites)
 - [Walkthrough](#walkthrough)
     - [Configuration](#configuration)
     - [Bash History](#bash-history)
@@ -55,7 +56,8 @@ the path in the below example.
     *Important: **bui-setup.sh** just binds the hotkey and should not be excuted directly.*
 
     ```sh
-    source ~/bash-ui-master/src/bui-setup.sh
+    $ source ~/bash-ui/src/bui-setup.sh
+    Installing Bash-UI hotkey:  => [B
     ```
 
 1. Re-start your Bash session.
@@ -81,6 +83,38 @@ your Bash history like in the above screenshot. At this point you can proceed to
 * **PuTTY v0.67** or higher: should be configured with Unicode and 256 color support.
     * In **Window->Translation** select **Use Unicode line drawling code points**.
     * In **Window->Colours** select **Allow terminal to use xterm 256-colour mode**.
+* **iTerm2**
+* **MacOS Terminal**
+
+### MacOS Prerequisites
+
+The MacOS default bash version (as of Mojave) is 3.2.57 that you can confirm.
+
+```
+$ echo $BASH_VERSION
+3.2.57(1)-release
+```
+
+You will need to install an updated bash as follows. Install Homebrew if you do not already have and install a new bash.
+
+```
+$ brew update && brew install bash
+```
+
+This will not change your default shell located at `/bin/bash`. You can launch the new shell as follows. We use the `-l` option to launch a login shell because MacOS does not normally use the `.bashrc` file.
+
+```
+$ /usr/local/bin/bash -l
+$ echo $BASH_VERSION
+5.0.11(1)-release
+```
+
+Optionally, you can make the new shell the default for new sessions:
+
+```
+$ sudo bash -c 'echo /usr/local/bin/bash >> /etc/shells'
+$ chsh -s /usr/local/bin/bash
+```
 
 ## Walkthrough
 
