@@ -75,10 +75,10 @@ fn_vmenu_actions()
             then
                 # user pressed up on first row so exit controller
                 util_exit_dispatcher=1
-                break
+            else
+                fn_vmenu_action_move -1
+                _result=$?
             fi
-            fn_vmenu_action_move -1
-            _result=$?
             ;;
         $CSI_KEY_DOWN)
             fn_vmenu_action_move 1

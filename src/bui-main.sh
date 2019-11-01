@@ -30,8 +30,6 @@ source ${BUI_HOME}/bui-panel-slider.sh
 
 declare -r BUI_VERSION=1.0
 
-declare -r BIW_MIN_BASH_VERSION='4.1.17'
-
 # a controller can set a result here when it is closed.
 declare bui_selection_result
 
@@ -39,8 +37,6 @@ function fn_bui_main()
 {
     # remove any existing result file.
     rm -f $BUI_RESULT_FILE
-
-    #fn_util_bash_version_check "$BIW_MIN_BASH_VERSION"
 
     fn_util_panel_open
     fn_theme_init
@@ -163,6 +159,10 @@ function fn_bui_controller_cfg_hotkey()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
+        if ((util_exit_dispatcher))
+        then
+            break
+        fi
 
         case "$_key" in
             $CSI_KEY_ENTER|$CSI_KEY_SPC) 
@@ -250,6 +250,10 @@ function fn_bui_controller_history()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
+        if ((util_exit_dispatcher))
+        then
+            break
+        fi
 
         case "$_key" in
             $CSI_KEY_ENTER) 
@@ -320,7 +324,14 @@ function fn_bui_controller_cfg_theme()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
-        if [ $? == $UTIL_ACT_CHANGED ]
+        local _action_result=$?
+
+        if ((util_exit_dispatcher))
+        then
+            break
+        fi
+
+        if [ $_action_result == $UTIL_ACT_CHANGED ]
         then
             # use the vmenu index to determine the selected theme
             fn_theme_set_idx_active $vmenu_idx_selected
@@ -387,8 +398,16 @@ function fn_bui_controller_cfg_dims()
     while fn_util_process_key _key '' $((slider_ctl_selected_idx >= 0))
     do
         fn_slider_actions "$_key"
-        if [ $? == $UTIL_ACT_CHANGED ]
+        local _action_result=$?
+
+        if ((util_exit_dispatcher))
         then
+            break
+        fi
+
+        if [ $_action_result == $UTIL_ACT_CHANGED ]
+        then
+            #UTIL_DEBUG_MSG="fn_bui_controller_cfg_dims: changed"
             # action handled so get next key
             if((!bui_dims_save_pending))
             then

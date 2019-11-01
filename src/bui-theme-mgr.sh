@@ -140,9 +140,9 @@ function fn_theme_set_color_attr()
 function fn_theme_parse_color()
 {
     local _result_ref=$1
-    local _color_params=$2
+    local _color_params_in=$2
 
-    local -a _color_params=( $_color_params )
+    local -a _color_params=( $_color_params_in )
     local -i _color_params_size=${#_color_params[@]}
     local -i _color_result
 

@@ -372,10 +372,9 @@ function fn_sgr_hsv216_get()
     fi
 
     # get value from lookup table
-    local -i _lut_size=${#HSV216_TABLE_DATA[*]}
     local -i _sgr_code
 
-    if((_lut_size > 0))
+    if [ -n "${HSV216_TABLE_DATA+x}" ]
     then
         # get from table
         _lut_idx=$((_intensity*HSV216_SAT_SIZE*HSV216_HUE_SIZE + _sat*HSV216_HUE_SIZE + _hue))

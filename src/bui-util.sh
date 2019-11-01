@@ -131,44 +131,6 @@ function fn_util_process_key()
     return $UTIL_ACT_CHANGED
 }
 
-function fn_util_bash_version_check()
-{
-    local _min_version_str=$1
-
-    local _current_str
-    printf -v _current_str '%s.%s.%s' \
-        "${BASH_VERSINFO[0]}" \
-        "${BASH_VERSINFO[1]}" \
-        "${BASH_VERSINFO[2]}"
-
-    local -i _current_version
-    fn_util_parse_version $_current_str '_current_version'
-
-    local -i _min_version
-    fn_util_parse_version $_min_version_str '_min_version'
-
-    if((_current_version < _min_version))
-    then
-        fn_util_die "Bash Version too old (${_current_str} < ${_min_version_str})"
-    fi
-}
-
-function fn_util_parse_version()
-{
-    local _version_str=$1
-    local _result_ref=$2
-
-    local -a _version_arr=( ${_version_str//./ } )
-    local -i _version_int=0
-    ((_version_int += _version_arr[0]))
-    ((_version_int *= 100))
-    ((_version_int += _version_arr[1]))
-    ((_version_int *= 1000))
-    ((_version_int += _version_arr[2]))
-
-    printf -v $_result_ref '%d' $_version_int
-}
-
 function fn_util_panel_open()
 {
     # Install panic handler

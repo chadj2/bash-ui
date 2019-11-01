@@ -24,6 +24,10 @@ function fn_bui_controller_browse()
     while fn_util_process_key _key
     do
         fn_vmenu_actions "$_key"
+        if ((util_exit_dispatcher))
+        then
+            break
+        fi
 
         if [ "$_key" == $CSI_KEY_ENTER ]
         then

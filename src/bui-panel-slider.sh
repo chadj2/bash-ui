@@ -59,14 +59,12 @@ function fn_slider_actions()
             then
                 # user pressed up on first row so exit controller
                 util_exit_dispatcher=1
-                break
+            else 
+                fn_slider_ctl_set_active $((slider_ctl_selected_idx - 1))
             fi
-            fn_slider_ctl_set_active $((slider_ctl_selected_idx - 1))
-            _result=$UTIL_ACT_IGNORED
             ;;
         $CSI_KEY_DOWN)
             fn_slider_ctl_set_active $((slider_ctl_selected_idx + 1))
-            _result=$UTIL_ACT_IGNORED
             ;;
         $CSI_KEY_LEFT)
             fn_slider_ctl_drag -1
