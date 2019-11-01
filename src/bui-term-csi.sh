@@ -159,7 +159,7 @@ function fn_csi_milli_wait()
     
     # we use read insted of sleep because it is a 
     # bash builtin and sleep would be too slow
-    read -s -N0 -t$_animate_delay
+    read -s -N 1 -t$_animate_delay
 }
 
 function fn_csi_get_row_pos()
