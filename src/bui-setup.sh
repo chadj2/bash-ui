@@ -8,74 +8,30 @@
 # File:         bui-setup.sh
 # Description:  Setup script to be added to .bashrc.
 ##
-#set -o nounset
+
+declare BUI_BIND_UPDATE_FILE=$HOME/.bui_bind_update
+declare BUI_RESULT_FILE=$HOME/.bui_selection
+
+# unset if already set
+unset BUI_LAST_BIND_KEY
 
 function fn_bui_setup_init()
 {
-    local BIW_MIN_BASH_VERSION='4.1.17'
-
     if [[ ! "$-" =~ "i" ]]
     then
         echo "ERROR: ${BASH_SOURCE[0]}: This script must be sourced and not executed." 2>&1
         return 1
     fi
 
-    if ! fn_bui_setup_version_check "$BIW_MIN_BASH_VERSION"
-    then
-        return 1
-    fi
-    
-    # load env vars
     fn_bui_setup_set_home
 
-    if ! source ${BUI_HOME}/bui-settings.sh
+    # execute in subshell
+    if ! (set -o nounset; fn_bui_setup_write_bind_file)
     then
         return 1
     fi
 
-    local _bind_key
-    fn_settings_get_hotkey '_bind_key'
-
-    fn_bui_setup_bind $_bind_key
-}
-
-function fn_bui_setup_version_check()
-{
-    local _min_version_str=$1
-
-    local _current_str
-    printf -v _current_str '%s.%s.%s' \
-        "${BASH_VERSINFO[0]}" \
-        "${BASH_VERSINFO[1]}" \
-        "${BASH_VERSINFO[2]}"
-
-    local -i _current_version
-    fn_bui_setup_version $_current_str '_current_version'
-
-    local -i _min_version
-    fn_bui_setup_version $_min_version_str '_min_version'
-
-    if((_current_version < _min_version))
-    then
-        echo "ERROR: ${BASH_SOURCE[0]}: Bash version too old: $_current_str < $_min_version_str" 2>&1
-        return 1
-    fi
-}
-
-function fn_bui_setup_version()
-{
-    local _version_str=$1
-    local _result_ref=$2
-
-    local -a _version_arr=( ${_version_str//./ } )
-    local -i _version_int=0
-    ((_version_int += _version_arr[0]))
-    ((_version_int *= 100))
-    ((_version_int += _version_arr[1]))
-    ((_version_int *= 1000))
-    ((_version_int += _version_arr[2]))
-
-    printf -v $_result_ref '%d' $_version_int
+    fn_update_key_binding
 }
 
 function fn_bui_setup_set_home()
@@ -94,6 +50,24 @@ function fn_bui_setup_set_home()
     _script_dir=$(cd $_script_dir; pwd -P)
     
     export BUI_HOME=$_script_dir
+}
+
+function fn_bui_setup_write_bind_file()
+{
+    if ! source ${BUI_HOME}/bui-settings.sh
+    then
+        return 1
+    fi
+
+    if ! fn_settings_version_check
+    then
+        return 1
+    fi
+
+    if ! fn_settings_write_bind_file
+    then
+        return 1
+    fi
 }
 
 function fn_bui_setup_show()
@@ -116,11 +90,8 @@ function fn_bui_setup_show()
     READLINE_POINT=${#READLINE_LINE}
 
     rm $BUI_RESULT_FILE
-
     return 0
 }
-
-declare BUI_LAST_BIND_KEY
 
 function fn_update_key_binding()
 {
@@ -138,7 +109,7 @@ function fn_update_key_binding()
         return 0
     fi
 
-    echo "BUI hotkey update: ESC${BUI_LAST_BIND_KEY} => ESC${_bind_update}"
+    echo "Installing Bash-UI hotkey: ${BUI_LAST_BIND_KEY} => ${_bind_update}"
 
     bind -r "\e$BUI_LAST_BIND_KEY"
     fn_bui_setup_bind "$_bind_update"
@@ -162,5 +133,6 @@ function fn_bui_setup_bind()
 # entry point
 if ! fn_bui_setup_init
 then
+    echo "ERROR: Bash-UI setup failed!"
     return 1
 fi

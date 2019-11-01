@@ -9,14 +9,16 @@
 # Description:  Configuration settings load/save.
 ##
 
+declare -r BIW_MIN_BASH_VERSION='4.1.17'
+
 # file for persisting theme
 declare -r BUI_SETTINGS_FILE=$HOME/.bui_settings
 
 # file to store selection result
-readonly BUI_RESULT_FILE=$HOME/.bui_selection
+declare -r BUI_RESULT_FILE=$HOME/.bui_selection
 
 # file used to pass back updates to the key binding
-readonly BUI_BIND_UPDATE_FILE=$HOME/.bui_bind_update
+declare -r BUI_BIND_UPDATE_FILE=$HOME/.bui_bind_update
 
 # array with settings parameters
 declare -A bui_settings_params=()
@@ -116,6 +118,13 @@ function fn_settings_get_hotkey()
         $BUI_DEFAULT_BIND_KEY
 }
 
+function fn_settings_write_bind_file()
+{
+    local _bind_key
+    fn_settings_get_hotkey '_bind_key'
+    echo "$_bind_key" > $BUI_BIND_UPDATE_FILE
+}
+
 function fn_settings_set_hotkey()
 {
     local _bind_key=$1
@@ -125,4 +134,43 @@ function fn_settings_set_hotkey()
         $_bind_key
 
     echo "$_bind_key" > $BUI_BIND_UPDATE_FILE
+}
+
+function fn_settings_version_check()
+{
+    local _min_version_str=$BIW_MIN_BASH_VERSION
+
+    local _current_str
+    printf -v _current_str '%s.%s.%s' \
+        "${BASH_VERSINFO[0]}" \
+        "${BASH_VERSINFO[1]}" \
+        "${BASH_VERSINFO[2]}"
+
+    local -i _current_version
+    fn_settings_version $_current_str '_current_version'
+
+    local -i _min_version
+    fn_settings_version $_min_version_str '_min_version'
+
+    if((_current_version < _min_version))
+    then
+        echo "ERROR: ${BASH_SOURCE[0]}: Bash version too old: $_current_str < $_min_version_str" 2>&1
+        return 1
+    fi
+}
+
+function fn_settings_version()
+{
+    local _version_str=$1
+    local _result_ref=$2
+
+    local -a _version_arr=( ${_version_str//./ } )
+    local -i _version_int=0
+    ((_version_int += _version_arr[0]))
+    ((_version_int *= 100))
+    ((_version_int += _version_arr[1]))
+    ((_version_int *= 1000))
+    ((_version_int += _version_arr[2]))
+
+    printf -v $_result_ref '%d' $_version_int
 }
