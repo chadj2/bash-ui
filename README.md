@@ -88,14 +88,14 @@ your Bash history like in the above screenshot. At this point you can proceed to
 
 ### MacOS Prerequisites
 
-The MacOS default bash version (as of Mojave) is 3.2.57 that you can confirm.
+The MacOS default bash version (as of Mojave) is 3.2.57 that you can confirm:
 
 ```
 $ echo $BASH_VERSION
 3.2.57(1)-release
 ```
 
-You will need to install an updated bash as follows. Install Homebrew if you do not already have and install a new bash.
+If you see this version you will need to install an updated bash. Install Homebrew if you do not already have and then install a new bash:
 
 ```
 $ brew update && brew install bash
